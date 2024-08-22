@@ -9,4 +9,12 @@ license = "MIT"
 keywords = ["md", "markdown", "pdf"]
 repository = "https://github.com/theiskaa/mdPdf"
 
+[lib]
+name = "mpd"
+path = "src/lib/lib.rs"
+
+[[bin]]
+name = "mpd"
+path = "src/bin/main.rs"
+
 [dependencies]
