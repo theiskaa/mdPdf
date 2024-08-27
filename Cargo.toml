@@ -18,3 +18,4 @@ name = "mpd"
 path = "src/bin/main.rs"
 
 [dependencies]
+thiserror = "1.0.63"
