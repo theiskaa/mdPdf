@@ -18,5 +18,5 @@ name = "mpd"
 path = "src/bin/main.rs"
 
 [dependencies]
-pulldown-cmark = "0.12.0"
+printpdf = "0.7.0"
 thiserror = "1.0.63"
