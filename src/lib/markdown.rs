@@ -1,18 +1,17 @@
 #[derive(Debug, PartialEq)]
 pub enum Token {
-    Heading(String, usize),  // (content, level)
-    Paragraph(String),
-    Emphasis(String),
-    StrongEmphasis(String),
+    Heading(Vec<Token>, usize), // (content, level)
+    Emphasis(Vec<Token>),
+    StrongEmphasis(Vec<Token>),
     Code(String),
     BlockQuote(String),
-    ListItem(String),
-    HorizontalRule,
-    Link(String, String),   // (text, url)
-    Image(String, String),  // (alt text, url)
+    ListItem(Vec<Token>),
+    Link(String, String),  // (text, url)
+    Image(String, String), // (alt text, url)
     Text(String),
-    Newline,
     HtmlComment(String),
+    Newline,
+    HorizontalRule,
     Unknown(String),
 }
 
@@ -27,12 +26,10 @@ pub struct Lexer {
     position: usize,
 }
 
+#[allow(dead_code)]
 impl Lexer {
     pub fn new(input: String) -> Self {
-        Lexer {
-            input,
-            position: 0,
-        }
+        Lexer { input, position: 0 }
     }
 
     pub fn parse(&mut self) -> Result<Vec<Token>, LexerError> {
@@ -47,6 +44,21 @@ impl Lexer {
         Ok(tokens)
     }
 
+    fn parse_nested_content(&mut self, delimiter: Option<char>) -> Result<Vec<Token>, LexerError> {
+        let mut nested_tokens = Vec::new();
+        while self.position < self.input.len() {
+            if let Some(delim) = delimiter {
+                if self.current_char() == delim {
+                    break;
+                }
+            }
+            if let Some(token) = self.next_token()? {
+                nested_tokens.push(token);
+            }
+        }
+        Ok(nested_tokens)
+    }
+
     fn next_token(&mut self) -> Result<Option<Token>, LexerError> {
         self.skip_whitespace();
 
@@ -58,10 +70,10 @@ impl Lexer {
 
         let token = match current_char {
             '#' => self.parse_heading()?,
-            '*' | '_' => self.parse_emphasis_or_strong_emphasis()?,
+            '*' | '_' => self.parse_emphasis()?,
             '`' => self.parse_code()?,
             '>' => self.parse_blockquote()?,
-            '-' | '+' => self.parse_list_item_or_horizontal_rule()?,  // '*' removed from here
+            '-' | '+' => self.parse_list_item_or_horizontal_rule()?,
             '[' => self.parse_link()?,
             '!' => self.parse_image()?,
             '<' => {
@@ -85,20 +97,23 @@ impl Lexer {
             self.advance();
         }
         self.skip_whitespace();
-        let content = self.read_until_newline();
+        let content = self.parse_nested_content(Some('\n'))?;
         Ok(Token::Heading(content, level))
     }
 
-    fn parse_emphasis_or_strong_emphasis(&mut self) -> Result<Token, LexerError> {
+    // TODO: Refactor emphasis parsing. Currently, the delimiter is passed as a single character '*',
+    // leading to misinterpretation when parsing nested tokens. This also prevents the correct handling
+    // of nested emphasis within emphasis tokens.
+    fn parse_emphasis(&mut self) -> Result<Token, LexerError> {
         let delimiter = self.current_char();
         self.advance();
         if self.current_char() == delimiter {
             self.advance();
-            let content = self.read_until_char(delimiter);
+            let content = self.parse_nested_content(Some(delimiter))?;
             self.advance();
             Ok(Token::StrongEmphasis(content))
         } else {
-            let content = self.read_until_char(delimiter);
+            let content = self.parse_nested_content(Some(delimiter))?;
             self.advance();
             Ok(Token::Emphasis(content))
         }
@@ -128,7 +143,7 @@ impl Lexer {
             return Ok(Token::HorizontalRule);
         }
 
-        let content = self.read_until_newline();
+        let content = self.parse_nested_content(Some('\n'))?;
         Ok(Token::ListItem(content))
     }
 
@@ -179,7 +194,7 @@ impl Lexer {
     }
 
     fn parse_html_comment(&mut self) -> Result<Token, LexerError> {
-        self.position += 4;  // Skip past '<!--'
+        self.position += 4; // Skip past '<!--'
         let start = self.position;
 
         while self.position < self.input.len() && !self.input[self.position..].starts_with("-->") {
@@ -188,7 +203,7 @@ impl Lexer {
 
         if self.position < self.input.len() {
             let comment = self.input[start..self.position].to_string();
-            self.position += 3;  // Skip past '-->'
+            self.position += 3; // Skip past '-->'
             Ok(Token::HtmlComment(comment))
         } else {
             Err(LexerError::UnexpectedEndOfInput)
@@ -196,7 +211,10 @@ impl Lexer {
     }
 
     fn skip_whitespace(&mut self) {
-        while self.position < self.input.len() && self.current_char().is_whitespace() && self.current_char() != '\n' {
+        while self.position < self.input.len()
+            && self.current_char().is_whitespace()
+            && self.current_char() != '\n'
+        {
             self.advance();
         }
     }
@@ -246,6 +264,9 @@ impl Lexer {
     }
 
     fn is_special_char(&self, ch: char) -> bool {
-        matches!(ch, '#' | '*' | '_' | '`' | '>' | '-' | '[' | '!' | '\n' | '+' | ')')
+        matches!(
+            ch,
+            '#' | '*' | '_' | '`' | '>' | '-' | '[' | '!' | '\n' | '+' | ')'
+        )
     }
 }
