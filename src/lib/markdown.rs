@@ -1,7 +1,7 @@
 #[derive(Debug, PartialEq)]
 pub enum Token {
     Heading(Vec<Token>, usize), // (content, level)
-    Emphasis(Vec<Token>),
+    Emphasis { level: usize, content: Vec<Token> },
     StrongEmphasis(Vec<Token>),
     Code(String),
     BlockQuote(String),
@@ -99,41 +99,35 @@ impl Lexer {
         Ok(Token::Heading(content, level))
     }
 
-    // TODO: This also prevents the correct handling
-    // of nested emphasis within emphasis tokens.
     fn parse_emphasis(&mut self) -> Result<Token, LexerError> {
         let start_pos = self.position;
         let delimiter = self.current_char();
-        self.advance();
+        let mut level = 0;
 
-        // Check for strong emphasis (** or __)
-        let is_strong = self.current_char() == delimiter;
-        if is_strong {
+        // Count the number of delimiters
+        while self.current_char() == delimiter {
+            level += 1;
             self.advance();
         }
 
+        // Parse the content
         let content = self.parse_nested_content(|c| c == delimiter)?;
-        if is_strong {
-            if self.current_char() != delimiter || self.peek_char() != delimiter {
+
+        // Ensure proper closing
+        for _ in 0..level {
+            if self.current_char() != delimiter {
                 return Err(LexerError::UnknownToken(format!(
                     "Unmatched emphasis at position {}",
                     start_pos
                 )));
             }
-            self.advance(); // Consume second delimiter
-        } else if self.current_char() != delimiter {
-            return Err(LexerError::UnknownToken(format!(
-                "Unmatched emphasis at position {}",
-                start_pos
-            )));
+            self.advance();
         }
-        self.advance();
 
-        if is_strong {
-            Ok(Token::StrongEmphasis(content))
-        } else {
-            Ok(Token::Emphasis(content))
-        }
+        Ok(Token::Emphasis {
+            level: level.min(3), // Cap the level at 3
+            content,
+        })
     }
 
     fn parse_code(&mut self) -> Result<Token, LexerError> {
