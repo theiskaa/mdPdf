@@ -44,19 +44,17 @@ impl Lexer {
         Ok(tokens)
     }
 
-    fn parse_nested_content(&mut self, delimiter: Option<char>) -> Result<Vec<Token>, LexerError> {
-        let mut nested_tokens = Vec::new();
-        while self.position < self.input.len() {
-            if let Some(delim) = delimiter {
-                if self.current_char() == delim {
-                    break;
-                }
-            }
+    fn parse_nested_content<F>(&mut self, is_delimiter: F) -> Result<Vec<Token>, LexerError>
+    where
+        F: Fn(char) -> bool,
+    {
+        let mut content = Vec::new();
+        while self.position < self.input.len() && !is_delimiter(self.current_char()) {
             if let Some(token) = self.next_token()? {
-                nested_tokens.push(token);
+                content.push(token);
             }
         }
-        Ok(nested_tokens)
+        Ok(content)
     }
 
     fn next_token(&mut self) -> Result<Option<Token>, LexerError> {
@@ -97,24 +95,43 @@ impl Lexer {
             self.advance();
         }
         self.skip_whitespace();
-        let content = self.parse_nested_content(Some('\n'))?;
+        let content = self.parse_nested_content(|c| c == '\n')?;
         Ok(Token::Heading(content, level))
     }
 
-    // TODO: Refactor emphasis parsing. Currently, the delimiter is passed as a single character '*',
-    // leading to misinterpretation when parsing nested tokens. This also prevents the correct handling
+    // TODO: This also prevents the correct handling
     // of nested emphasis within emphasis tokens.
     fn parse_emphasis(&mut self) -> Result<Token, LexerError> {
+        let start_pos = self.position;
         let delimiter = self.current_char();
         self.advance();
-        if self.current_char() == delimiter {
+
+        // Check for strong emphasis (** or __)
+        let is_strong = self.current_char() == delimiter;
+        if is_strong {
             self.advance();
-            let content = self.parse_nested_content(Some(delimiter))?;
-            self.advance();
+        }
+
+        let content = self.parse_nested_content(|c| c == delimiter)?;
+        if is_strong {
+            if self.current_char() != delimiter || self.peek_char() != delimiter {
+                return Err(LexerError::UnknownToken(format!(
+                    "Unmatched emphasis at position {}",
+                    start_pos
+                )));
+            }
+            self.advance(); // Consume second delimiter
+        } else if self.current_char() != delimiter {
+            return Err(LexerError::UnknownToken(format!(
+                "Unmatched emphasis at position {}",
+                start_pos
+            )));
+        }
+        self.advance();
+
+        if is_strong {
             Ok(Token::StrongEmphasis(content))
         } else {
-            let content = self.parse_nested_content(Some(delimiter))?;
-            self.advance();
             Ok(Token::Emphasis(content))
         }
     }
@@ -143,7 +160,7 @@ impl Lexer {
             return Ok(Token::HorizontalRule);
         }
 
-        let content = self.parse_nested_content(Some('\n'))?;
+        let content = self.parse_nested_content(|c| c == '\n')?;
         Ok(Token::ListItem(content))
     }
 
