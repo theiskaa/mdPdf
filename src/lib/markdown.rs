@@ -65,22 +65,17 @@ impl Lexer {
         }
 
         let current_char = self.current_char();
+        let is_line_start = self.is_at_line_start();
 
         let token = match current_char {
-            '#' => self.parse_heading()?,
+            '#' if is_line_start => self.parse_heading()?,
             '*' | '_' => self.parse_emphasis()?,
             '`' => self.parse_code()?,
-            '>' => self.parse_blockquote()?,
-            '-' | '+' => self.parse_list_item_or_horizontal_rule()?,
+            '>' if is_line_start => self.parse_blockquote()?,
+            '-' | '+' if is_line_start => self.parse_list_item_or_horizontal_rule()?,
             '[' => self.parse_link()?,
             '!' => self.parse_image()?,
-            '<' => {
-                if self.is_html_comment_start() {
-                    self.parse_html_comment()?
-                } else {
-                    self.parse_text()?
-                }
-            }
+            '<' if self.is_html_comment_start() => self.parse_html_comment()?,
             '\n' => self.parse_newline()?,
             _ => self.parse_text()?,
         };
@@ -104,16 +99,12 @@ impl Lexer {
         let delimiter = self.current_char();
         let mut level = 0;
 
-        // Count the number of delimiters
         while self.current_char() == delimiter {
             level += 1;
             self.advance();
         }
 
-        // Parse the content
         let content = self.parse_nested_content(|c| c == delimiter)?;
-
-        // Ensure proper closing
         for _ in 0..level {
             if self.current_char() != delimiter {
                 return Err(LexerError::UnknownToken(format!(
@@ -159,29 +150,29 @@ impl Lexer {
     }
 
     fn parse_link(&mut self) -> Result<Token, LexerError> {
-        self.advance(); // skip '['
+        self.advance();
         let text = self.read_until_char(']');
-        self.advance(); // skip ']'
+        self.advance();
         if self.current_char() == '(' {
-            self.advance(); // skip '('
+            self.advance();
             let url = self.read_until_char(')');
-            self.advance(); // skip ')'
-            Ok(Token::Link(text, url))
-        } else {
-            Err(LexerError::UnknownToken(text))
+            self.advance();
+            return Ok(Token::Link(text, url));
         }
+
+        Ok(Token::Link(text, String::new()))
     }
 
     fn parse_image(&mut self) -> Result<Token, LexerError> {
-        self.advance(); // skip '!'
+        self.advance();
         if self.current_char() == '[' {
-            self.advance(); // skip '['
+            self.advance();
             let alt_text = self.read_until_char(']');
-            self.advance(); // skip ']'
+            self.advance();
             if self.current_char() == '(' {
-                self.advance(); // skip '('
+                self.advance();
                 let url = self.read_until_char(')');
-                self.advance(); // skip ')'
+                self.advance();
                 Ok(Token::Image(alt_text, url))
             } else {
                 Err(LexerError::UnknownToken(alt_text))
@@ -197,11 +188,28 @@ impl Lexer {
     }
 
     fn parse_text(&mut self) -> Result<Token, LexerError> {
-        let content = self.read_until_special_char_or_newline();
-        if content.is_empty() {
-            return Err(LexerError::UnknownToken(self.current_char().to_string()));
+        let mut content = String::new();
+        let start_pos = self.position;
+
+        while self.position < self.input.len() {
+            let ch = self.current_char();
+
+            if ch == '\n' || self.is_start_of_special_token() {
+                break;
+            }
+
+            content.push(ch);
+            self.advance();
         }
-        Ok(Token::Text(content))
+
+        if content.is_empty() {
+            Err(LexerError::UnknownToken(format!(
+                "Unexpected character at position {}",
+                start_pos
+            )))
+        } else {
+            Ok(Token::Text(content))
+        }
     }
 
     fn parse_html_comment(&mut self) -> Result<Token, LexerError> {
@@ -258,26 +266,20 @@ impl Lexer {
         self.input[start..self.position].to_string()
     }
 
-    fn read_until_special_char_or_newline(&mut self) -> String {
-        let start = self.position;
-        while self.position < self.input.len() {
-            let current_char = self.current_char();
-            if self.is_special_char(current_char) || current_char == '\n' {
-                break;
-            }
-            self.advance();
-        }
-        self.input[start..self.position].to_string()
+    fn is_at_line_start(&self) -> bool {
+        self.position == 0 || self.input.chars().nth(self.position - 1) == Some('\n')
     }
 
     fn is_html_comment_start(&self) -> bool {
         self.input[self.position..].starts_with("<!--")
     }
 
-    fn is_special_char(&self, ch: char) -> bool {
-        matches!(
-            ch,
-            '#' | '*' | '_' | '`' | '>' | '-' | '[' | '!' | '\n' | '+' | ')'
-        )
+    fn is_start_of_special_token(&self) -> bool {
+        let ch = self.current_char();
+        match ch {
+            '#' | '*' | '_' | '`' | '[' | '!' => true,
+            '<' => self.is_html_comment_start(),
+            _ => false,
+        }
     }
 }
