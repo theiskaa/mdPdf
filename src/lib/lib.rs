@@ -1,20 +1,14 @@
+pub mod fonts;
 pub mod markdown;
+pub mod pdf;
 
 use markdown::*;
+use pdf::Pdf;
 
 pub fn parse(markdown: String) {
     let mut lexer = Lexer::new(markdown);
-    let tokens = lexer.parse();
-    match tokens {
-        Ok(v) => {
-            for token in v.iter() {
-                println!("{:?}", token);
-            }
-        },
-        Err(e) => {
-            println!("{:?}", e);
-        }
-    }
+    let tokens = lexer.parse().expect("Failed to parse your markdown");
+    let parser = Pdf::new(tokens);
+    let document = parser.create_document();
+    Pdf::render(document, "markdown.pdf");
 }
-
-

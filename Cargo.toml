@@ -18,5 +18,6 @@ name = "mpd"
 path = "src/bin/main.rs"
 
 [dependencies]
+genpdf = "0.2.0"
 printpdf = "0.7.0"
 thiserror = "1.0.63"

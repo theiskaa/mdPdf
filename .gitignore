@@ -27,4 +27,6 @@ Cargo.lock
 #/target
 #/Cargo.lock
 
-/assets
+assets/data
+
+.DS_Store
