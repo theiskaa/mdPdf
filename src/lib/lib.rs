@@ -1,4 +1,3 @@
-pub mod fonts;
 pub mod markdown;
 pub mod pdf;
 
