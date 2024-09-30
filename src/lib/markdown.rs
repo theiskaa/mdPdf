@@ -22,14 +22,17 @@ pub enum LexerError {
 }
 
 pub struct Lexer {
-    input: String,
+    input: Vec<char>,
     position: usize,
 }
 
 #[allow(dead_code)]
 impl Lexer {
     pub fn new(input: String) -> Self {
-        Lexer { input, position: 0 }
+        Lexer {
+            input: input.chars().collect(),
+            position: 0,
+        }
     }
 
     pub fn parse(&mut self) -> Result<Vec<Token>, LexerError> {
@@ -99,12 +102,15 @@ impl Lexer {
         let delimiter = self.current_char();
         let mut level = 0;
 
+        // Count the number of delimiters
         while self.current_char() == delimiter {
             level += 1;
             self.advance();
         }
 
         let content = self.parse_nested_content(|c| c == delimiter)?;
+
+        // Ensure proper closing
         for _ in 0..level {
             if self.current_char() != delimiter {
                 return Err(LexerError::UnknownToken(format!(
@@ -150,16 +156,15 @@ impl Lexer {
     }
 
     fn parse_link(&mut self) -> Result<Token, LexerError> {
-        self.advance();
+        self.advance(); // skip '['
         let text = self.read_until_char(']');
-        self.advance();
+        self.advance(); // skip ']'
         if self.current_char() == '(' {
-            self.advance();
+            self.advance(); // skip '('
             let url = self.read_until_char(')');
-            self.advance();
+            self.advance(); // skip ')'
             return Ok(Token::Link(text, url));
         }
-
         Ok(Token::Link(text, String::new()))
     }
 
@@ -168,11 +173,11 @@ impl Lexer {
         if self.current_char() == '[' {
             self.advance();
             let alt_text = self.read_until_char(']');
-            self.advance();
+            self.advance(); // skip ']'
             if self.current_char() == '(' {
-                self.advance();
+                self.advance(); // skip '('
                 let url = self.read_until_char(')');
-                self.advance();
+                self.advance(); // skip ')'
                 Ok(Token::Image(alt_text, url))
             } else {
                 Err(LexerError::UnknownToken(alt_text))
@@ -213,20 +218,30 @@ impl Lexer {
     }
 
     fn parse_html_comment(&mut self) -> Result<Token, LexerError> {
-        self.position += 4; // Skip past '<!--'
+        self.position += 4; // Skip past '<', '!', '-', '-'
         let start = self.position;
 
-        while self.position < self.input.len() && !self.input[self.position..].starts_with("-->") {
+        while self.position + 2 < self.input.len() {
+            if self.input[self.position] == '-'
+                && self.input[self.position + 1] == '-'
+                && self.input[self.position + 2] == '>'
+            {
+                break;
+            }
             self.advance();
         }
 
-        if self.position < self.input.len() {
-            let comment = self.input[start..self.position].to_string();
-            self.position += 3; // Skip past '-->'
+        if self.position + 2 < self.input.len() {
+            let comment: String = self.input[start..self.position].iter().collect();
+            self.position += 3; // Skip past '-', '-', '>'
             Ok(Token::HtmlComment(comment))
         } else {
             Err(LexerError::UnexpectedEndOfInput)
         }
+    }
+
+    fn is_at_line_start(&self) -> bool {
+        self.position == 0 || self.input.get(self.position - 1) == Some(&'\n')
     }
 
     fn skip_whitespace(&mut self) {
@@ -243,11 +258,11 @@ impl Lexer {
     }
 
     fn current_char(&self) -> char {
-        self.input.chars().nth(self.position).unwrap_or('\0')
+        *self.input.get(self.position).unwrap_or(&'\0')
     }
 
     fn peek_char(&self) -> char {
-        self.input.chars().nth(self.position + 1).unwrap_or('\0')
+        *self.input.get(self.position + 1).unwrap_or(&'\0')
     }
 
     fn read_until_newline(&mut self) -> String {
@@ -255,7 +270,7 @@ impl Lexer {
         while self.position < self.input.len() && self.current_char() != '\n' {
             self.advance();
         }
-        self.input[start..self.position].to_string()
+        self.input[start..self.position].iter().collect()
     }
 
     fn read_until_char(&mut self, delimiter: char) -> String {
@@ -263,15 +278,14 @@ impl Lexer {
         while self.position < self.input.len() && self.current_char() != delimiter {
             self.advance();
         }
-        self.input[start..self.position].to_string()
-    }
-
-    fn is_at_line_start(&self) -> bool {
-        self.position == 0 || self.input.chars().nth(self.position - 1) == Some('\n')
+        self.input[start..self.position].iter().collect()
     }
 
     fn is_html_comment_start(&self) -> bool {
-        self.input[self.position..].starts_with("<!--")
+        self.input[self.position..]
+            .iter()
+            .collect::<String>()
+            .starts_with("<!--")
     }
 
     fn is_start_of_special_token(&self) -> bool {
