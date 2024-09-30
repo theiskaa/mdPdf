@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     Heading(Vec<Token>, usize), // (content, level)
     Emphasis { level: usize, content: Vec<Token> },
