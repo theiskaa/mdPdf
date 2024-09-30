@@ -30,3 +30,6 @@ Cargo.lock
 assets/data
 
 .DS_Store
+
+markdown.pdf
+markdown.md
