@@ -17,12 +17,6 @@ path = "src/lib/lib.rs"
 name = "mpd"
 path = "src/bin/main.rs"
 
-[run]
-include = ["src/bin/help.txt"]
-
-[build]
-include = ["src/bin/help.txt"]
-
 [dependencies]
 genpdf = "0.2.0"
 printpdf = "0.7.0"
