@@ -1,5 +1,36 @@
+use std::fs;
 use clap::{Arg, Command};
-use std::{fs, env};
+
+// TODO: move this help message into another file (txt)
+const HELP: &str = r#"
+          _ ___    _  __
+ _ __  __| | _ \__| |/ _|
+| '  \/ _` |  _/ _` |  _|
+|_|_|_\__,_|_| \__,_|_|
+
+Usage: md [OPTIONS]
+The 'md' command is a tool for converting Markdown content into a PDF document.
+
+Options:
+  -p, --path        Specify the path to the Markdown file to convert.
+  -s, --string      Provide Markdown content directly as a string.
+  -o, --output      Specify the output file path for the generated PDF.
+
+Examples:
+  md -p "docs/resume.md" -o "resume.pdf"
+     Convert the 'resume.md' file in the 'docs' folder to 'resume.pdf'.
+
+  md -s "**bold text** *italic text*." -o "output.pdf"
+     Convert the provided Markdown string to 'output.pdf'.
+
+  md -p "file.md"
+     Convert 'file.md' to a PDF, saving it as 'output.pdf'.
+
+Notes:
+- If both `-p` and `-s` options are provided, the `--path` option will take precedence.
+- If no output file is specified with `-o`, the default output file will be 'output.pdf'.
+- Source code can be viewed at: https://github.com/theiskaa/mdPdf
+"#;
 
 fn main() {
     let matches = Command::new("Markdown to PDF Converter")
@@ -36,9 +67,7 @@ fn main() {
     } else if let Some(markdown_string) = matches.get_one::<String>("string") {
         markdown_string.to_string()
     } else {
-        let current_dir = env::current_dir().unwrap();
-        let help = fs::read_to_string(current_dir.join("src/bin/help.txt")).unwrap();
-        println!("{}", help);
+        println!("{}", HELP);
         return;
     };
 
@@ -49,3 +78,4 @@ fn main() {
 
     println!("PDF saved to: {}", output_path);
 }
+
