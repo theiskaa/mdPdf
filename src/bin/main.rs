@@ -45,7 +45,7 @@ fn main() {
     let binding = "output.pdf".to_string();
     let output_path = matches.get_one::<String>("output").unwrap_or(&binding);
 
-    mpd::parse(markdown, output_path);
+    mdp::parse(markdown, output_path);
 
     println!("PDF saved to: {}", output_path);
 }

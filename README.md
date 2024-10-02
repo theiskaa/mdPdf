@@ -31,7 +31,7 @@ To use the `mdPdf` tool, you can either specify a Markdown file path, provide Ma
 1. Convert a Markdown file to a PDF:
 
    ```bash
-   mpd -p "docs/resume.md" -o "resume.pdf"
+   mdp -p "docs/resume.md" -o "resume.pdf"
    ```
 
    This will convert the `resume.md` file located in the `docs` folder to a PDF file named `resume.pdf`.
@@ -39,7 +39,7 @@ To use the `mdPdf` tool, you can either specify a Markdown file path, provide Ma
 2. Convert Markdown content provided as a string:
 
    ```bash
-   mpd -s "# My Markdown Title\n\nThis is content." -o "output.pdf"
+   mdp -s "# My Markdown Title\n\nThis is content." -o "output.pdf"
    ```
 
    This will convert the provided Markdown string to a PDF file named `output.pdf`.
@@ -47,7 +47,7 @@ To use the `mdPdf` tool, you can either specify a Markdown file path, provide Ma
 3. Convert a Markdown file to a PDF with default output:
 
    ```bash
-   mpd -p "file.md"
+   mdp -p "file.md"
    ```
 
    This will convert the `file.md` to a PDF and save it as `output.pdf`.
