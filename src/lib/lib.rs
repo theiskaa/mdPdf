@@ -1,5 +1,6 @@
 pub mod markdown;
 pub mod pdf;
+pub mod styling;
 
 use markdown::*;
 use pdf::Pdf;
