@@ -31,5 +31,4 @@ assets/data
 
 .DS_Store
 
-markdown.pdf
-markdown.md
+*.pdf
