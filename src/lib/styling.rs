@@ -5,25 +5,29 @@ use genpdf::{
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum MdPdfFont {
+    Roboto,
     ITCAvantGardeGothicStdMedium,
 }
 
 impl MdPdfFont {
     pub fn name(&self) -> &'static str {
         match self {
-            MdPdfFont::ITCAvantGardeGothicStdMedium => "ITC-Avant-Garde-Gothic-Std-Medium",
+            MdPdfFont::Roboto => "roboto",
+            MdPdfFont::ITCAvantGardeGothicStdMedium => "itc-avant-garde-gothic-std-medium",
         }
     }
     pub fn find_match(family: Option<&str>) -> MdPdfFont {
-        match family.unwrap_or("ITC-Avant-Garde-Gothic-Std-Medium") {
-            "ITC-Avant-Garde-Gothic-Std-Medium" => MdPdfFont::ITCAvantGardeGothicStdMedium,
-            _ => MdPdfFont::ITCAvantGardeGothicStdMedium,
+        match family.unwrap_or("roboto") {
+            "itc-avant-garde-gothic-std-medium" => MdPdfFont::ITCAvantGardeGothicStdMedium,
+            "roboto" => MdPdfFont::Roboto,
+            _ => MdPdfFont::Roboto,
         }
     }
 
     pub fn load_font_family(family: Option<&str>) -> Result<FontFamily<FontData>, Error> {
         let found_match = MdPdfFont::find_match(family);
-        genpdf::fonts::from_files("assets/fonts", found_match.name(), None)
+        let path = format!("assets/fonts/{}", found_match.name());
+        genpdf::fonts::from_files(path.as_str(), found_match.name(), None)
     }
 }
 
@@ -105,13 +109,13 @@ impl StyleMatch {
     pub fn default() -> Self {
         Self {
             margins: Margins {
-                top: 10.0,
-                right: 10.0,
-                bottom: 10.0,
-                left: 10.0,
+                top: 8.0,
+                right: 8.0,
+                bottom: 8.0,
+                left: 8.0,
             },
             heading_1: BasicTextStyle::new(
-                16,
+                14,
                 Some((0, 0, 0)),
                 Some(0.5),
                 Some(TextAlignment::Center),
@@ -123,18 +127,6 @@ impl StyleMatch {
                 None,
             ),
             heading_2: BasicTextStyle::new(
-                14,
-                Some((0, 0, 0)),
-                Some(0.5),
-                Some(TextAlignment::Left),
-                None,
-                true,
-                false,
-                false,
-                false,
-                None,
-            ),
-            heading_3: BasicTextStyle::new(
                 12,
                 Some((0, 0, 0)),
                 Some(0.5),
@@ -146,8 +138,20 @@ impl StyleMatch {
                 false,
                 None,
             ),
-            emphasis: BasicTextStyle::new(
+            heading_3: BasicTextStyle::new(
                 10,
+                Some((0, 0, 0)),
+                Some(0.5),
+                Some(TextAlignment::Left),
+                None,
+                true,
+                false,
+                false,
+                false,
+                None,
+            ),
+            emphasis: BasicTextStyle::new(
+                8,
                 Some((0, 0, 0)),
                 None,
                 None,
@@ -159,7 +163,7 @@ impl StyleMatch {
                 None,
             ),
             strong_emphasis: BasicTextStyle::new(
-                10,
+                8,
                 Some((0, 0, 0)),
                 None,
                 None,
@@ -171,7 +175,7 @@ impl StyleMatch {
                 None,
             ),
             code: BasicTextStyle::new(
-                10,
+                8,
                 Some((128, 128, 128)),
                 None,
                 None,
@@ -183,7 +187,7 @@ impl StyleMatch {
                 Some((230, 230, 230)),
             ),
             block_quote: BasicTextStyle::new(
-                10,
+                8,
                 Some((128, 128, 128)),
                 None,
                 None,
@@ -195,7 +199,7 @@ impl StyleMatch {
                 Some((245, 245, 245)),
             ),
             list_item: BasicTextStyle::new(
-                10,
+                8,
                 Some((0, 0, 0)),
                 Some(0.5),
                 None,
@@ -207,7 +211,7 @@ impl StyleMatch {
                 None,
             ),
             link: BasicTextStyle::new(
-                10,
+                8,
                 Some((128, 128, 128)),
                 None,
                 None,
@@ -219,7 +223,7 @@ impl StyleMatch {
                 None,
             ),
             image: BasicTextStyle::new(
-                10,
+                8,
                 Some((0, 0, 0)),
                 None,
                 Some(TextAlignment::Center),
@@ -231,7 +235,7 @@ impl StyleMatch {
                 None,
             ),
             text: BasicTextStyle::new(
-                10,
+                8,
                 Some((0, 0, 0)),
                 None,
                 None,
@@ -243,7 +247,7 @@ impl StyleMatch {
                 None,
             ),
             horizontal_rule: BasicTextStyle::new(
-                10,
+                8,
                 Some((0, 0, 0)),
                 Some(0.5),
                 None,
