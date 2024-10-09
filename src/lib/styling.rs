@@ -41,10 +41,10 @@ pub enum TextAlignment {
 
 #[derive(Clone, Copy)]
 pub struct Margins {
-    pub top: f64,
-    pub right: f64,
-    pub bottom: f64,
-    pub left: f64,
+    pub top: f32,
+    pub right: f32,
+    pub bottom: f32,
+    pub left: f32,
 }
 
 #[derive(Clone, Copy)]
