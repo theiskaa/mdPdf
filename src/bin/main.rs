@@ -3,13 +3,14 @@ use clap::{Arg, Command};
 
 // TODO: move this help message into another file (txt)
 const HELP: &str = r#"
-          _ ___    _  __
- _ __  __| | _ \__| |/ _|
-| '  \/ _` |  _/ _` |  _|
-|_|_|_\__,_|_| \__,_|_|
+          _ ___
+ _ __  __| | _ \  01101101
+| '  \/ _` |  _/  01100100
+|_|_|_\__,_|_|    01110000
 
-Usage: md [OPTIONS]
-The 'md' command is a tool for converting Markdown content into a PDF document.
+
+Usage: mdp [OPTIONS]
+The 'mdp' command is a tool for converting Markdown content into a PDF document.
 
 Options:
   -p, --path        Specify the path to the Markdown file to convert.
@@ -17,19 +18,19 @@ Options:
   -o, --output      Specify the output file path for the generated PDF.
 
 Examples:
-  md -p "docs/resume.md" -o "resume.pdf"
+  mdp -p "docs/resume.md" -o "resume.pdf"
      Convert the 'resume.md' file in the 'docs' folder to 'resume.pdf'.
 
-  md -s "**bold text** *italic text*." -o "output.pdf"
+  mdp -s "**bold text** *italic text*." -o "output.pdf"
      Convert the provided Markdown string to 'output.pdf'.
 
-  md -p "file.md"
+  mdp -p "file.md"
      Convert 'file.md' to a PDF, saving it as 'output.pdf'.
 
 Notes:
 - If both `-p` and `-s` options are provided, the `--path` option will take precedence.
 - If no output file is specified with `-o`, the default output file will be 'output.pdf'.
-- Source code can be viewed at: https://github.com/theiskaa/mdPdf
+- Source code can be viewed at: https://github.com/theiskaa/mdp
 "#;
 
 fn main() {
