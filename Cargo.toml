@@ -1,5 +1,5 @@
 [package]
-name = "mpd"
+name = "mdp"
 version = "0.1.0"
 edition = "2021"
 authors = ["Ismael Sh <me@theiskaa.com>"]
@@ -7,7 +7,7 @@ description = "Create PDF with Markdown files (a md to pdf transpiler)"
 readme = "README.md"
 license = "MIT"
 keywords = ["md", "markdown", "pdf"]
-repository = "https://github.com/theiskaa/mdPdf"
+repository = "https://github.com/theiskaa/mdp"
 
 [lib]
 name = "mdp"

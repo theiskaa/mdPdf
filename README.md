@@ -1,5 +1,5 @@
-# mdPdf
-mdPdf is a versatile command-line tool and library designed to convert Markdown content into pre-styled PDF documents. It supports reading Markdown from a file or directly from a string, offering flexibility for both users and developers.
+# mdp
+mdp is a versatile command-line tool and library designed to convert Markdown content into pre-styled PDF documents. It supports reading Markdown from a file or directly from a string, offering flexibility for both users and developers.
 
 This project includes both a binary and a library:
 - **Binary (cli)**: A command-line interface that uses the core library to provide an easy way to convert Markdown to PDF.
@@ -11,14 +11,14 @@ This project includes both a binary and a library:
 Currently, there isn't a simplified official method to install the command-line tool across platforms. To use it, you can clone the repository and build the project yourself using Cargo:
 
 ```bash
-git clone https://github.com/theiskaa/mdPdf.git
-cd mdPdf
+git clone https://github.com/theiskaa/mdp.git
+cd mdp
 cargo build --release
 ```
 
 ## Usage
 
-To use the `mdPdf` tool, you can either specify a Markdown file path, provide Markdown content directly, or set the output PDF path.
+To use the `mdp` tool, you can either specify a Markdown file path, provide Markdown content directly, or set the output PDF path.
 
 ### Options
 
