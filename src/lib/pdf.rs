@@ -1,20 +1,9 @@
+use crate::styling::{MdPdfFont, StyleMatch};
 use crate::Token;
 use genpdf::elements::{Paragraph, UnorderedList};
 use genpdf::fonts::{FontData, FontFamily};
 use genpdf::style::{Color, Style};
-
-#[derive(Debug, PartialEq)]
-pub enum MdPdfFont {
-    ITCAvantGardeGothicStdMedium,
-}
-
-impl MdPdfFont {
-    pub fn name(&self) -> &'static str {
-        match self {
-            MdPdfFont::ITCAvantGardeGothicStdMedium => "ITC-Avant-Garde-Gothic-Std-Medium",
-        }
-    }
-}
+use genpdf::Margins;
 
 #[derive(Debug)]
 enum Block {
@@ -46,90 +35,89 @@ impl Pdf {
         }
     }
 
-    pub fn create_document(self) -> genpdf::Document {
-        // Load your custom font
-        let font_family = genpdf::fonts::from_files(
-            "assets/fonts",
-            MdPdfFont::ITCAvantGardeGothicStdMedium.name(),
-            None,
-        )
-        .expect("Failed to load font family");
-
-        // TODO: Load a monospace font for code blocks
-        let code_font_family = genpdf::fonts::from_files("assets/fonts", "monospace", None)
-            .unwrap_or_else(|_| font_family.clone()); // Fallback to main font if not available
+    pub fn create_document(self, style_match: StyleMatch) -> genpdf::Document {
+        let font_family = MdPdfFont::load_font_family(style_match.text.font_family)
+            .expect("Failed to load font family");
+        let code_font_family = MdPdfFont::load_font_family(style_match.code.font_family)
+            .expect("Failed to load code font family");
 
         let mut doc = genpdf::Document::new(font_family.clone());
-        doc.set_title("Generated Markdown PDF");
-
         // Set document decorator and margins
         let mut decorator = genpdf::SimplePageDecorator::new();
-        decorator.set_margins(10);
+        decorator.set_margins(Margins::trbl(
+            style_match.margins.top,
+            style_match.margins.right,
+            style_match.margins.bottom,
+            style_match.margins.left,
+        ));
         doc.set_page_decorator(decorator);
-
-        // Set default font size
-        doc.set_font_size(10);
+        doc.set_font_size(style_match.text.size);
 
         // Process tokens into blocks
         let blocks = self.group_tokens(self.input.clone());
 
-        // Render each block
         for block in blocks {
             match block {
                 Block::Heading(content, level) => {
-                    let size = match level {
-                        1 => 17,
-                        2 => 15,
-                        3 => 13,
-                        _ => 11,
+                    let heading_style = match level {
+                        1 => &style_match.heading_1,
+                        2 => &style_match.heading_2,
+                        3 => &style_match.heading_3,
+                        _ => &style_match.text,
                     };
-                    let style = Style::new().bold().with_font_size(size);
-                    let paragraph =
-                        self.process_inline_tokens(content, style, &font_family, &code_font_family);
+                    let mut style = Style::new().with_font_size(heading_style.size);
+                    if heading_style.bold {
+                        style = style.bold();
+                    }
+                    if heading_style.italic {
+                        style = style.italic();
+                    }
+                    if let Some(color) = heading_style.text_color {
+                        style = style.with_color(Color::Rgb(color.0, color.1, color.2));
+                    }
+                    let paragraph = self.process_inline_tokens(content, style, &font_family, &code_font_family, &style_match);
                     doc.push(paragraph);
-                    // Add spacing after heading
-                    doc.push(genpdf::elements::Break::new(0.5));
+                    doc.push(genpdf::elements::Break::new(heading_style.after_spacing));
                 }
                 Block::Paragraph(content) => {
-                    let paragraph = self.process_inline_tokens(
-                        content,
-                        Style::new(),
-                        &font_family,
-                        &code_font_family,
-                    );
+                    let mut style = Style::new().with_font_size(style_match.text.size);
+                    if let Some(color) = style_match.text.text_color {
+                        style = style.with_color(Color::Rgb(color.0, color.1, color.2));
+                    }
+                    let paragraph = self.process_inline_tokens(content, style, &font_family, &code_font_family, &style_match);
                     doc.push(paragraph);
-                    // No extra spacing after paragraph
+                    doc.push(genpdf::elements::Break::new(style_match.text.after_spacing));
                 }
                 Block::List(items) => {
                     let mut list = UnorderedList::new();
                     for item_tokens in items {
-                        let item_paragraph = self.process_inline_tokens(
-                            item_tokens,
-                            Style::new(),
-                            &font_family,
-                            &code_font_family,
-                        );
+                        let mut style = Style::new().with_font_size(style_match.list_item.size);
+                        if let Some(color) = style_match.list_item.text_color {
+                            style = style.with_color(Color::Rgb(color.0, color.1, color.2));
+                        }
+                        let item_paragraph = self.process_inline_tokens(item_tokens, style, &font_family, &code_font_family, &style_match);
                         list.push(item_paragraph);
                     }
                     doc.push(list);
-                    // Add spacing after list
-                    doc.push(genpdf::elements::Break::new(0.5));
+                    doc.push(genpdf::elements::Break::new(style_match.list_item.after_spacing));
                 }
                 Block::BlockQuote(content) => {
-                    let style = Style::new().italic().with_color(Color::Rgb(128, 128, 128));
-                    let paragraph =
-                        self.process_inline_tokens(content, style, &font_family, &code_font_family);
+                    let mut style = Style::new().with_font_size(style_match.block_quote.size);
+                    if style_match.block_quote.italic {
+                        style = style.italic();
+                    }
+                    if let Some(color) = style_match.block_quote.text_color {
+                        style = style.with_color(Color::Rgb(color.0, color.1, color.2));
+                    }
+                    let paragraph = self.process_inline_tokens(content, style, &font_family, &code_font_family, &style_match);
                     doc.push(paragraph);
-                    // Add spacing after blockquote
-                    doc.push(genpdf::elements::Break::new(0.5));
+                    doc.push(genpdf::elements::Break::new(style_match.block_quote.after_spacing));
                 }
                 Block::HorizontalRule => {
-                    // Implement horizontal rule if needed
-                    // For now, add spacing
-                    doc.push(genpdf::elements::Break::new(0.5));
+                    // TODO: implement horizontal rule element.
+                    doc.push(genpdf::elements::Break::new(style_match.horizontal_rule.after_spacing));
                 }
                 Block::EmptyLine => {
-                    // Add spacing equivalent to one line
                     doc.push(genpdf::elements::Break::new(1.0));
                 }
             }
@@ -247,9 +235,10 @@ impl Pdf {
         style: Style,
         font_family: &FontFamily<FontData>,
         code_font_family: &FontFamily<FontData>,
+        style_match: &StyleMatch,
     ) -> Paragraph {
         let mut paragraph = Paragraph::default();
-        self.render_inline_tokens(&mut paragraph, tokens, style, font_family, code_font_family);
+        self.render_inline_tokens(&mut paragraph, tokens, style, font_family, code_font_family, style_match);
         paragraph
     }
 
@@ -261,6 +250,7 @@ impl Pdf {
         style: Style,
         font_family: &FontFamily<FontData>,
         code_font_family: &FontFamily<FontData>,
+        style_match: &StyleMatch,
     ) {
         for token in tokens {
             match token {
@@ -286,6 +276,7 @@ impl Pdf {
                         nested_style,
                         font_family,
                         code_font_family,
+                        style_match,
                     );
                 }
                 Token::StrongEmphasis(content) => {
@@ -296,20 +287,24 @@ impl Pdf {
                         nested_style,
                         font_family,
                         code_font_family,
+                        style_match,
                     );
                 }
-                Token::Link(text, _url) => {
-                    let link_style = style.clone().with_color(Color::Rgb(0, 0, 255));
-                    paragraph.push_styled(text, link_style);
+                Token::Link(text, url) => {
+                    let mut link_style = style.clone();
+                    if let Some(color) = style_match.link.text_color {
+                        link_style = link_style.with_color(Color::Rgb(color.0, color.1, color.2));
+                    }
+                    paragraph.push_link(text, url, link_style);
                 }
                 Token::Code(content) => {
-                    let code_style = style.clone().with_color(Color::Rgb(0, 0, 255));
+                    let mut code_style = style.clone();
+                    if let Some(color) = style_match.code.text_color {
+                        code_style = code_style.with_color(Color::Rgb(color.0, color.1, color.2));
+                    }
                     paragraph.push_styled(content, code_style);
                 }
-                Token::Newline => {
-                    // TODO: handle new line in paragraph.
-                    // paragraph.push(genpdf::elements::Break::new());
-                }
+                Token::Newline => {} // DO NOTHING
                 _ => {}
             }
         }
