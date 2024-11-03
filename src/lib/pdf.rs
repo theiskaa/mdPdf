@@ -295,7 +295,9 @@ impl Pdf {
                     if let Some(color) = style_match.link.text_color {
                         link_style = link_style.with_color(Color::Rgb(color.0, color.1, color.2));
                     }
-                    paragraph.push_link(text, url, link_style);
+                    // TODO: Adding a space after link text to fix spacing between consecutive links.
+                    // This workaround should be moved to the lexer level for a proper fix.
+                    paragraph.push_link(format!("{} ", text), url, link_style);
                 }
                 Token::Code(content) => {
                     let mut code_style = style.clone();
