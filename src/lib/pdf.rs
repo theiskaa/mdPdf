@@ -290,12 +290,12 @@ impl Pdf {
                         style_match,
                     );
                 }
-                Token::Link(text, _url) => {
+                Token::Link(text, url) => {
                     let mut link_style = style.clone();
                     if let Some(color) = style_match.link.text_color {
                         link_style = link_style.with_color(Color::Rgb(color.0, color.1, color.2));
                     }
-                    paragraph.push_styled(text, link_style);
+                    paragraph.push_link(text, url, link_style);
                 }
                 Token::Code(content) => {
                     let mut code_style = style.clone();
