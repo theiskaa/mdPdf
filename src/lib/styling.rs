@@ -6,28 +6,31 @@ use genpdf::{
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum MdPdfFont {
     Roboto,
-    ITCAvantGardeGothicStdMedium,
 }
 
 impl MdPdfFont {
-    pub fn name(&self) -> &'static str {
+    pub fn dir(&self) -> &'static str {
         match self {
             MdPdfFont::Roboto => "roboto",
-            MdPdfFont::ITCAvantGardeGothicStdMedium => "itc-avant-garde-gothic-std-medium",
         }
     }
+
+    pub fn file(&self) -> &'static str {
+        match self {
+            MdPdfFont::Roboto => "Roboto",
+        }
+    }
+
     pub fn find_match(family: Option<&str>) -> MdPdfFont {
         match family.unwrap_or("roboto") {
-            "itc-avant-garde-gothic-std-medium" => MdPdfFont::ITCAvantGardeGothicStdMedium,
-            "roboto" => MdPdfFont::Roboto,
             _ => MdPdfFont::Roboto,
         }
     }
 
     pub fn load_font_family(family: Option<&str>) -> Result<FontFamily<FontData>, Error> {
         let found_match = MdPdfFont::find_match(family);
-        let path = format!("assets/fonts/{}", found_match.name());
-        genpdf::fonts::from_files(path.as_str(), found_match.name(), None)
+        let path = format!("assets/fonts/{}", found_match.dir());
+        genpdf::fonts::from_files(path.as_str(), found_match.file(), None)
     }
 }
 
