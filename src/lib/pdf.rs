@@ -1,3 +1,8 @@
+//! PDF generation module for markdown-to-pdf conversion.
+//!
+//! This module handles converting markdown tokens into a PDF document,
+//! applying styling and formatting according to the provided configuration.
+
 use crate::styling::{MdPdfFont, StyleMatch};
 use crate::Token;
 use genpdf::elements::{Paragraph, UnorderedList};
@@ -5,25 +10,29 @@ use genpdf::fonts::{FontData, FontFamily};
 use genpdf::style::{Color, Style};
 use genpdf::Margins;
 
+/// Represents a block-level element in the document structure.
 #[derive(Debug)]
 enum Block {
-    Heading(Vec<Token>, usize),
+    Heading(Vec<Token>, usize), // (content, level [1-6])
     Paragraph(Vec<Token>),
-    List(Vec<Vec<Token>>), // List of list items
+    List(Vec<Vec<Token>>),
     BlockQuote(Vec<Token>),
     HorizontalRule,
     EmptyLine,
 }
 
+/// Main PDF document generator.
 pub struct Pdf {
     input: Vec<Token>,
 }
 
 impl Pdf {
+    /// Creates a new PDF generator with the given markdown tokens.
     pub fn new(input: Vec<Token>) -> Self {
         Self { input }
     }
 
+    /// Renders the document to a PDF file at the specified path.
     pub fn render(document: genpdf::Document, file: &str) {
         match document.render_to_file(file) {
             Ok(_) => {
@@ -35,6 +44,7 @@ impl Pdf {
         }
     }
 
+    /// Creates a PDF document from the markdown tokens using the provided styling.
     pub fn create_document(self, style_match: StyleMatch) -> genpdf::Document {
         let font_family = MdPdfFont::load_font_family(style_match.text.font_family)
             .expect("Failed to load font family");
@@ -75,7 +85,13 @@ impl Pdf {
                     if let Some(color) = heading_style.text_color {
                         style = style.with_color(Color::Rgb(color.0, color.1, color.2));
                     }
-                    let paragraph = self.process_inline_tokens(content, style, &font_family, &code_font_family, &style_match);
+                    let paragraph = self.process_inline_tokens(
+                        content,
+                        style,
+                        &font_family,
+                        &code_font_family,
+                        &style_match,
+                    );
                     doc.push(paragraph);
                     doc.push(genpdf::elements::Break::new(heading_style.after_spacing));
                 }
@@ -84,7 +100,13 @@ impl Pdf {
                     if let Some(color) = style_match.text.text_color {
                         style = style.with_color(Color::Rgb(color.0, color.1, color.2));
                     }
-                    let paragraph = self.process_inline_tokens(content, style, &font_family, &code_font_family, &style_match);
+                    let paragraph = self.process_inline_tokens(
+                        content,
+                        style,
+                        &font_family,
+                        &code_font_family,
+                        &style_match,
+                    );
                     doc.push(paragraph);
                     doc.push(genpdf::elements::Break::new(style_match.text.after_spacing));
                 }
@@ -95,11 +117,19 @@ impl Pdf {
                         if let Some(color) = style_match.list_item.text_color {
                             style = style.with_color(Color::Rgb(color.0, color.1, color.2));
                         }
-                        let item_paragraph = self.process_inline_tokens(item_tokens, style, &font_family, &code_font_family, &style_match);
+                        let item_paragraph = self.process_inline_tokens(
+                            item_tokens,
+                            style,
+                            &font_family,
+                            &code_font_family,
+                            &style_match,
+                        );
                         list.push(item_paragraph);
                     }
                     doc.push(list);
-                    doc.push(genpdf::elements::Break::new(style_match.list_item.after_spacing));
+                    doc.push(genpdf::elements::Break::new(
+                        style_match.list_item.after_spacing,
+                    ));
                 }
                 Block::BlockQuote(content) => {
                     let mut style = Style::new().with_font_size(style_match.block_quote.size);
@@ -109,13 +139,23 @@ impl Pdf {
                     if let Some(color) = style_match.block_quote.text_color {
                         style = style.with_color(Color::Rgb(color.0, color.1, color.2));
                     }
-                    let paragraph = self.process_inline_tokens(content, style, &font_family, &code_font_family, &style_match);
+                    let paragraph = self.process_inline_tokens(
+                        content,
+                        style,
+                        &font_family,
+                        &code_font_family,
+                        &style_match,
+                    );
                     doc.push(paragraph);
-                    doc.push(genpdf::elements::Break::new(style_match.block_quote.after_spacing));
+                    doc.push(genpdf::elements::Break::new(
+                        style_match.block_quote.after_spacing,
+                    ));
                 }
                 Block::HorizontalRule => {
                     // TODO: implement horizontal rule element.
-                    doc.push(genpdf::elements::Break::new(style_match.horizontal_rule.after_spacing));
+                    doc.push(genpdf::elements::Break::new(
+                        style_match.horizontal_rule.after_spacing,
+                    ));
                 }
                 Block::EmptyLine => {
                     doc.push(genpdf::elements::Break::new(1.0));
@@ -126,7 +166,14 @@ impl Pdf {
         doc
     }
 
-    // Function to group tokens into blocks
+    /// Groups tokens into logical block-level elements.
+    ///
+    /// This function processes the flat list of tokens into a hierarchical structure
+    /// of blocks (paragraphs, headings, lists, etc). It handles:
+    /// - Consecutive inline tokens as paragraphs
+    /// - Multiple newlines as paragraph breaks
+    /// - List items grouping into lists
+    /// - Block-level elements like headings and blockquotes
     fn group_tokens(&self, tokens: Vec<Token>) -> Vec<Block> {
         let mut blocks = Vec::new();
         let mut idx = 0;
@@ -228,7 +275,7 @@ impl Pdf {
         blocks
     }
 
-    // Function to process inline tokens into a paragraph
+    /// Processes a sequence of inline tokens into a paragraph with appropriate styling.
     fn process_inline_tokens(
         &self,
         tokens: Vec<Token>,
@@ -238,11 +285,25 @@ impl Pdf {
         style_match: &StyleMatch,
     ) -> Paragraph {
         let mut paragraph = Paragraph::default();
-        self.render_inline_tokens(&mut paragraph, tokens, style, font_family, code_font_family, style_match);
+        self.render_inline_tokens(
+            &mut paragraph,
+            tokens,
+            style,
+            font_family,
+            code_font_family,
+            style_match,
+        );
         paragraph
     }
 
-    // Function to render inline tokens within a paragraph
+    /// Renders inline tokens within a paragraph, applying appropriate styling.
+    ///
+    /// This function handles:
+    /// - Basic text with the current style
+    /// - Emphasis with italic/bold styling
+    /// - Links with custom colors
+    /// - Code blocks with monospace font
+    /// - Nested inline elements
     fn render_inline_tokens(
         &self,
         paragraph: &mut Paragraph,

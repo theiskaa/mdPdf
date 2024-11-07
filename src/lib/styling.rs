@@ -1,32 +1,61 @@
+//! Styling module for markdown-to-pdf conversion.
+//!
+//! This module provides styling configuration for converting markdown elements to PDF,
+//! including fonts, text styles, margins and alignments.
+//!
+//! # Example
+//! ```rust
+//! use mdp::styling::StyleMatch;
+//!
+//! // Create default styling
+//! let styles = StyleMatch::default();
+//! ```
+
 use genpdf::{
     error::Error,
     fonts::{FontData, FontFamily},
 };
 
+/// Available font families that can be used in the PDF document.
+/// Currently only supports Roboto font.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum MdPdfFont {
     Roboto,
 }
 
 impl MdPdfFont {
+    /// Returns the directory name where the font files are stored.
     pub fn dir(&self) -> &'static str {
         match self {
             MdPdfFont::Roboto => "roboto",
         }
     }
 
+    /// Returns the base filename of the font files without extension.
     pub fn file(&self) -> &'static str {
         match self {
             MdPdfFont::Roboto => "Roboto",
         }
     }
 
+    /// Finds a matching font family based on the provided name.
+    /// Currently defaults to Roboto for all inputs.
+    ///
+    /// # Arguments
+    /// * `family` - Optional font family name to match
     pub fn find_match(family: Option<&str>) -> MdPdfFont {
         match family.unwrap_or("roboto") {
             _ => MdPdfFont::Roboto,
         }
     }
 
+    /// Loads a font family from files in the assets directory.
+    ///
+    /// # Arguments
+    /// * `family` - Optional font family name to load
+    ///
+    /// # Returns
+    /// Result containing the loaded FontFamily or an Error
     pub fn load_font_family(family: Option<&str>) -> Result<FontFamily<FontData>, Error> {
         let found_match = MdPdfFont::find_match(family);
         let path = format!("assets/fonts/{}", found_match.dir());
@@ -34,14 +63,20 @@ impl MdPdfFont {
     }
 }
 
+/// Text alignment options for PDF elements.
 #[derive(Clone, Copy)]
 pub enum TextAlignment {
+    /// Align text to the left margin
     Left,
+    /// Center text between margins
     Center,
+    /// Align text to the right margin
     Right,
+    /// Spread text evenly between margins
     Justify,
 }
 
+/// Document margins configuration in points.
 #[derive(Clone, Copy)]
 pub struct Margins {
     pub top: f32,
@@ -50,21 +85,45 @@ pub struct Margins {
     pub left: f32,
 }
 
+/// Basic text styling properties that can be applied to any text element.
 #[derive(Clone, Copy)]
 pub struct BasicTextStyle {
+    /// Font size in points
     pub size: u8,
+    /// Text color in RGB format
     pub text_color: Option<(u8, u8, u8)>,
+    /// Space after element in points
     pub after_spacing: f32,
+    /// Text alignment within container
     pub alignment: Option<TextAlignment>,
+    /// Font family name
     pub font_family: Option<&'static str>,
+    /// Whether text should be bold
     pub bold: bool,
+    /// Whether text should be italic
     pub italic: bool,
+    /// Whether text should be underlined
     pub underline: bool,
+    /// Whether text should have strikethrough
     pub strikethrough: bool,
+    /// Background color in RGB format
     pub background_color: Option<(u8, u8, u8)>,
 }
 
 impl BasicTextStyle {
+    /// Creates a new BasicTextStyle with the specified properties.
+    ///
+    /// # Arguments
+    /// * `size` - Font size in points
+    /// * `text_color` - Optional RGB color tuple for text
+    /// * `after_spacing` - Optional space after element in points
+    /// * `alignment` - Optional text alignment
+    /// * `font_family` - Optional font family name
+    /// * `bold` - Whether text should be bold
+    /// * `italic` - Whether text should be italic
+    /// * `underline` - Whether text should be underlined
+    /// * `strikethrough` - Whether text should have strikethrough
+    /// * `background_color` - Optional RGB color tuple for background
     pub fn new(
         size: u8,
         text_color: Option<(u8, u8, u8)>,
@@ -92,23 +151,51 @@ impl BasicTextStyle {
     }
 }
 
+/// Main style configuration for mapping markdown elements to PDF styles.
+///
+/// This struct contains style definitions for each markdown element type
+/// that can appear in the document. It is used by the PDF renderer to
+/// determine how to format each element.
 pub struct StyleMatch {
+    /// Document margins
     pub margins: Margins,
+    /// Style for level 1 headings (#)
     pub heading_1: BasicTextStyle,
+    /// Style for level 2 headings (##)
     pub heading_2: BasicTextStyle,
+    /// Style for level 3 headings (###)
     pub heading_3: BasicTextStyle,
+    /// Style for emphasized text (*text* or _text_)
     pub emphasis: BasicTextStyle,
+    /// Style for strongly emphasized text (**text** or __text__)
     pub strong_emphasis: BasicTextStyle,
+    /// Style for inline code (`code`)
     pub code: BasicTextStyle,
+    /// Style for block quotes (> quote)
     pub block_quote: BasicTextStyle,
+    /// Style for list items (- item or * item)
     pub list_item: BasicTextStyle,
+    /// Style for links ([text](url))
     pub link: BasicTextStyle,
+    /// Style for images (![alt](url))
     pub image: BasicTextStyle,
+    /// Style for regular text
     pub text: BasicTextStyle,
+    /// Style for horizontal rules (---)
     pub horizontal_rule: BasicTextStyle,
 }
 
 impl StyleMatch {
+    /// Creates a StyleMatch with default styling settings.
+    ///
+    /// The default style provides a clean, readable layout with:
+    /// - Hierarchical heading sizes (14pt, 12pt, 10pt)
+    /// - 8pt base font size for body text
+    /// - Appropriate styling for code blocks and quotes
+    /// - Consistent spacing and margins
+    ///
+    /// # Returns
+    /// A new StyleMatch instance with default settings
     pub fn default() -> Self {
         Self {
             margins: Margins {
@@ -182,7 +269,7 @@ impl StyleMatch {
                 Some((128, 128, 128)),
                 None,
                 None,
-                Some("ITC-Avant-Garde-Gothic-Std-Medium"),
+                Some("Roboto"),
                 false,
                 false,
                 false,
