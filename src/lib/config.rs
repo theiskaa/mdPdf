@@ -97,7 +97,6 @@ fn map_font_family(font: &str) -> Option<&'static str> {
 fn parse_style(value: Option<&Value>, default: BasicTextStyle) -> BasicTextStyle {
     let mut style = default.clone();
     if let Some(style_config) = value {
-        // Parse numeric values
         if let Some(size) = style_config.get("size").and_then(|v| v.as_integer()) {
             style.size = size as u8;
         }
@@ -105,7 +104,6 @@ fn parse_style(value: Option<&Value>, default: BasicTextStyle) -> BasicTextStyle
             style.after_spacing = spacing as f32;
         }
 
-        // Parse colors
         if let Some(color) = parse_color(Some(style_config), "textcolor") {
             style.text_color = Some(color);
         }
@@ -155,8 +153,15 @@ fn parse_style(value: Option<&Value>, default: BasicTextStyle) -> BasicTextStyle
 /// // Use styles for PDF generation
 /// ```
 pub fn load_config() -> StyleMatch {
-    // TODO: read config from ~/.mdprc.toml
-    let config_path = Path::new("mdprc.toml");
+    // Try to read config from home directory first, fall back to current directory
+    let config_path = dirs::home_dir()
+        .map(|mut path| {
+            path.push("mdprc.toml");
+            path
+        })
+        .unwrap_or_else(|| Path::new("mdprc.toml").to_path_buf());
+
+    println!("config_path: {:?}", config_path);
     let config_str = match fs::read_to_string(config_path) {
         Ok(s) => s,
         Err(_) => return StyleMatch::default(),
