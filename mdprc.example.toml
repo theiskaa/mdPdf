@@ -1,0 +1,149 @@
+[margin]
+top = 8.0
+right = 8.0
+bottom = 8.0
+left = 8.0
+
+[heading.1]
+size = 14
+textcolor = { r = 0, g = 0, b = 0 }
+afterspacing = 0.5
+alignment = "center"
+fontfamily = "roboto"
+bold = true
+italic = false
+underline = false
+strikethrough = false
+backgroundcolor = { r = 255, g = 255, b = 255 }
+
+[heading.2]
+size = 12
+textcolor = { r = 0, g = 0, b = 0 }
+afterspacing = 0.5
+alignment = "left"
+fontfamily = "roboto"
+bold = true
+italic = false
+underline = false
+strikethrough = false
+backgroundcolor = { r = 255, g = 255, b = 255 }
+
+[heading.3]
+size = 10
+textcolor = { r = 0, g = 0, b = 0 }
+afterspacing = 0.5
+alignment = "left"
+fontfamily = "roboto"
+bold = true
+italic = false
+underline = false
+strikethrough = false
+backgroundcolor = { r = 255, g = 255, b = 255 }
+
+[emphasis]
+size = 8
+textcolor = { r = 0, g = 0, b = 0 }
+afterspacing = 0.0
+alignment = "left"
+fontfamily = "roboto"
+bold = false
+italic = true
+underline = false
+strikethrough = false
+backgroundcolor = { r = 255, g = 255, b = 255 }
+
+[strong_emphasis]
+size = 8
+textcolor = { r = 0, g = 0, b = 0 }
+afterspacing = 0.0
+alignment = "left"
+fontfamily = "roboto"
+bold = true
+italic = false
+underline = false
+strikethrough = false
+backgroundcolor = { r = 255, g = 255, b = 255 }
+
+[code]
+size = 8
+textcolor = { r = 128, g = 128, b = 128 }
+afterspacing = 0.0
+alignment = "left"
+fontfamily = "roboto"
+bold = false
+italic = false
+underline = false
+strikethrough = false
+backgroundcolor = { r = 230, g = 230, b = 230 }
+
+[block_quote]
+size = 8
+textcolor = { r = 128, g = 128, b = 128 }
+afterspacing = 0.0
+alignment = "left"
+fontfamily = "roboto"
+bold = false
+italic = true
+underline = false
+strikethrough = false
+backgroundcolor = { r = 245, g = 245, b = 245 }
+
+[list_item]
+size = 8
+textcolor = { r = 0, g = 0, b = 0 }
+afterspacing = 0.5
+alignment = "left"
+fontfamily = "roboto"
+bold = false
+italic = false
+underline = false
+strikethrough = false
+backgroundcolor = { r = 255, g = 255, b = 255 }
+
+[link]
+size = 8
+textcolor = { r = 128, g = 128, b = 128 }
+afterspacing = 0.0
+alignment = "left"
+fontfamily = "roboto"
+bold = false
+italic = false
+underline = true
+strikethrough = false
+backgroundcolor = { r = 255, g = 255, b = 255 }
+
+[image]
+size = 8
+textcolor = { r = 0, g = 0, b = 0 }
+afterspacing = 0.0
+alignment = "center"
+fontfamily = "roboto"
+bold = false
+italic = false
+underline = false
+strikethrough = false
+backgroundcolor = { r = 255, g = 255, b = 255 }
+
+[text]
+size = 8
+textcolor = { r = 0, g = 0, b = 0 }
+afterspacing = 0.0
+alignment = "left"
+fontfamily = "roboto"
+bold = false
+italic = false
+underline = false
+strikethrough = false
+backgroundcolor = { r = 255, g = 255, b = 255 }
+
+[horizontal_rule]
+size = 8
+textcolor = { r = 0, g = 0, b = 0 }
+afterspacing = 0.5
+alignment = "left"
+fontfamily = "roboto"
+bold = false
+italic = false
+underline = false
+strikethrough = false
+backgroundcolor = { r = 255, g = 255, b = 255 }
