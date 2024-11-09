@@ -10,16 +10,9 @@
 //! - Support for common Markdown elements like headings, emphasis, lists, etc.
 //! - Configurable margins, fonts, colors, and text properties
 //!
-//! # Configuration
-//! Styling can be customized through a TOML configuration file (`mdprc.toml`).
-//! The configuration supports:
-//! - Margins and page layout
-//! - Text styles for different Markdown elements (size, color, alignment, etc.)
-//! - Font families and text decorations
+//! # Examples
 //!
-//! See the `config` module for detailed configuration options.
-//!
-//! # Example
+//! Basic markdown-to-pdf conversion:
 //! ```rust
 //! use mdp;
 //!
@@ -28,6 +21,98 @@
 //! if let Err(e) = mdp::parse(markdown, "output.pdf") {
 //!     eprintln!("Failed to generate PDF: {}", e);
 //! }
+//! ```
+//!
+//! Converting a file with custom styling:
+//! ```rust
+//! use mdp;
+//! use std::fs;
+//!
+//! // Read markdown file
+//! let markdown = fs::read_to_string("input.md").unwrap();
+//!
+//! // Create custom styling config (mdprc.toml):
+//! // [heading.1]
+//! // size = 24
+//! // textcolor = { r = 0, g = 0, b = 255 }
+//! // bold = true
+//!
+//! // Convert with custom styling
+//! mdp::parse(markdown, "styled-output.pdf").unwrap();
+//! ```
+//!
+//! Processing markdown with images and links:
+//! ```rust
+//! let markdown = r#"
+//! # Document Title
+//!
+//! ![Logo](./images/logo.png)
+//!
+//! See our [website](https://example.com) for more info.
+//! "#.to_string();
+//!
+//! mdp::parse(markdown, "doc-with-images.pdf").unwrap();
+//! ```
+//!
+//! # Configuration
+//! Styling can be customized through a TOML configuration file (`mdprc.toml`).
+//!
+//! ## Page Layout
+//! ```toml
+//! [page]
+//! margins = { top = 72, right = 72, bottom = 72, left = 72 }
+//! size = "a4"
+//! orientation = "portrait"
+//! ```
+//!
+//! ## Element Styling
+//! ```toml
+//! [heading.1]
+//! size = 24
+//! textcolor = { r = 0, g = 0, b = 0 }
+//! bold = true
+//! afterspacing = 1.0
+//!
+//! [text]
+//! size = 12
+//! fontfamily = "roboto"
+//! alignment = "left"
+//!
+//! [code]
+//! backgroundcolor = { r = 245, g = 245, b = 245 }
+//! fontfamily = "roboto-mono"
+//! ```
+//!
+//! # Processing Pipeline
+//! ```text
+//! Input                  Processing                   Output
+//! -------------          ----------------             ----------------
+//! Markdown Text    -->   Lexical Analysis       -->   Token Stream
+//!                        (markdown::Lexer)            (Token enum)
+//!
+//! Token Stream    -->    Style Application      -->   PDF Elements
+//!                        (styling::StyleMatch)        (genpdf)
+//!
+//! PDF Elements    -->    PDF Generation         -->   Final PDF
+//!                        (pdf::Pdf)                   Document
+//! ```
+//!
+//! ## Token Processing Flow
+//! ```text
+//! +-------------+     +----------------+     +----------------+
+//! |  Markdown   |     |  Tokens        |     |  PDF Elements  |
+//! |  Input      | --> |  # -> Heading  | --> |  - Styled      |
+//! |  # Title    |     |  * -> List     |     |    Heading     |
+//! |  * Item     |     |  > -> Quote    |     |  - List with  |
+//! |  > Quote    |     |                |     |    bullets     |
+//! +-------------+     +----------------+     +----------------+
+//!
+//! +---------------+     +------------------+     +--------------+
+//! | Styling       |     | Font Loading     |     | Output:      |
+//! | - Font sizes  | --> | - Font families  | --> | Final        |
+//! | - Colors      |     | - Weights        |     | Rendered     |
+//! | - Margins     |     | - Styles         |     | PDF Document |
+//! +---------------+     +------------------+     +--------------+
 //! ```
 //!
 //! # Library Structure

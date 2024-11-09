@@ -3,12 +3,86 @@
 //! This module provides styling configuration for converting markdown elements to PDF,
 //! including fonts, text styles, margins and alignments.
 //!
-//! # Example
+//! # Examples
 //! ```rust
 //! use mdp::styling::StyleMatch;
 //!
 //! // Create default styling
 //! let styles = StyleMatch::default();
+//!
+//! // Access specific element styles
+//! let heading_size = styles.heading_1.size; // 14pt
+//! let text_color = styles.text.text_color; // RGB(0,0,0)
+//! let link_underline = styles.link.underline; // true
+//! ```
+//!
+//! ```rust
+//! use mdp::styling::{BasicTextStyle, TextAlignment};
+//!
+//! // Create custom text style
+//! let custom_style = BasicTextStyle::new(
+//!     12, // size
+//!     Some((0, 0, 255)), // blue text
+//!     Some(1.0), // spacing after
+//!     Some(TextAlignment::Center),
+//!     None, // default font
+//!     true, // bold
+//!     false, // not italic
+//!     false, // not underlined
+//!     false, // no strikethrough
+//!     None, // no background
+//! );
+//! ```
+//!
+//! # Styling Configuration
+//! The styling system supports customization through a TOML configuration file.
+//! Each element type can have the following properties:
+//!
+//! ```toml
+//! [element_name]
+//! size = 12 # Font size in points
+//! textcolor = { r = 0, g = 0, b = 0 } # RGB text color
+//! backgroundcolor = { r = 255, g = 255, b = 255 } # RGB background
+//! afterspacing = 0.5 # Vertical spacing after element
+//! alignment = "left" # Text alignment (left|center|right|justify)
+//! fontfamily = "roboto" # Font family name
+//! bold = false # Bold text
+//! italic = false # Italic text
+//! underline = false # Underlined text
+//! strikethrough = false # Strikethrough text
+//! ```
+//!
+//! Supported element types:
+//! - `heading.1`, `heading.2`, `heading.3` - Headings
+//! - `text` - Regular text
+//! - `emphasis` - Italic text
+//! - `strong_emphasis` - Bold text
+//! - `code` - Code blocks
+//! - `block_quote` - Block quotes
+//! - `list_item` - List items
+//! - `link` - Links
+//! - `image` - Image captions
+//! - `horizontal_rule` - Horizontal rules
+//!
+//! # Processing Pipeline
+//! ```text
+//! +----------------+     +------------------+     +------------------+
+//! | Markdown       | --> | Style            | --> | PDF Element      |
+//! | Element        |     | Configuration    |     | with Styling     |
+//! +----------------+     +------------------+     +------------------+
+//!       |                       |                        |
+//!       |                       |                        |
+//!       v                       v                        v
+//! (e.g. # Heading)    (size: 14, bold: true)     (Formatted heading in PDF document)
+//! ```
+//!
+//! Font Processing:
+//! ```text
+//! +--------------+     +---------------+     +------------------+
+//! | Font Family  | --> | Font Loading  | --> | PDF Font        |
+//! | Selection    |     | from Assets   |     | Registration    |
+//! +--------------+     +---------------+     +------------------+
+//! (e.g. "roboto")     (Load TTF files)      (Ready for use in document)
 //! ```
 
 use genpdf::{

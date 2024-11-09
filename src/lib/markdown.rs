@@ -1,4 +1,43 @@
 /// Represents the different types of tokens that can be parsed from Markdown text.
+///
+/// # Examples
+/// ```rust
+/// use mdp::Token;
+///
+/// // Heading token with nested content
+/// let heading = Token::Heading(vec![Token::Text("Title".to_string())], 1);
+///
+/// // Emphasis token with nested content
+/// let emphasis = Token::Emphasis {
+///     level: 1,
+///     content: vec![Token::Text("italic".to_string())]
+/// };
+///
+/// // Link token with text and URL
+/// let link = Token::Link("Click here".to_string(), "https://example.com".to_string());
+/// ```
+///
+/// # Token Processing Pipeline
+/// ```text
+/// Input Text           Token Type                          PDF Element
+/// -----------          -------------------------           -------------
+/// # Heading     -->    Token::Heading(vec[], 1)     -->    <h1> styled text
+/// *emphasis*    -->    Token::Emphasis{1, vec[]}    -->    <em> styled text
+/// [link](url)   -->    Token::Link(text, url)       -->    <a> styled link
+/// ```
+///
+/// # Nested Token Structure
+/// ```text
+/// Token::Heading
+///   └── Vec<Token>
+///       ├── Token::Text
+///       ├── Token::Emphasis
+///       │   └── Vec<Token>
+///       │       └── Token::Text
+///       └── Token::Link
+///           ├── text: String
+///           └── url: String
+/// ```
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     /// A heading with nested content and level (e.g., # h1, ## h2)
@@ -29,6 +68,21 @@ pub enum LexerError {
 
 /// A lexical analyzer that converts Markdown text into a sequence of tokens.
 /// Handles nested structures and special Markdown syntax elements.
+///
+/// # Examples
+/// ```rust
+/// use mdp::markdown::Lexer;
+///
+/// let mut lexer = Lexer::new("# Hello\n*world*".to_string());
+/// let tokens = lexer.parse().unwrap();
+///
+/// // Parse specific elements
+/// let mut lexer = Lexer::new("**bold text**".to_string());
+/// let emphasis = lexer.parse_emphasis().unwrap();
+///
+/// let mut lexer = Lexer::new("[link](url)".to_string());
+/// let link = lexer.parse_link().unwrap();
+/// ```
 pub struct Lexer {
     input: Vec<char>,
     position: usize,

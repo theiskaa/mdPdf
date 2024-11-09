@@ -2,6 +2,62 @@
 //!
 //! This module handles converting markdown tokens into a PDF document,
 //! applying styling and formatting according to the provided configuration.
+//!
+//! # Examples
+//!
+//! Basic PDF generation:
+//! ```rust
+//! use mdp::pdf::Pdf;
+//! use mdp::styling::StyleMatch;
+//! use mdp::Token;
+//!
+//! // Create tokens from markdown
+//! let tokens = vec![Token::Text("Hello world".to_string())];
+//!
+//! // Generate PDF with default styling
+//! let pdf = Pdf::new(tokens);
+//! let doc = pdf.create_document(StyleMatch::default());
+//! Pdf::render(doc, "output.pdf");
+//! ```
+//!
+//! Custom styling:
+//! ```rust
+//! use mdp::pdf::Pdf;
+//! use mdp::styling::{StyleMatch, BasicTextStyle};
+//!
+//! let mut styles = StyleMatch::default();
+//! styles.heading_1.size = 24; // Large headings
+//! styles.text.text_color = Some((0, 0, 255)); // Blue text
+//!
+//! let pdf = Pdf::new(tokens);
+//! let doc = pdf.create_document(styles);
+//! ```
+//!
+//! # Processing Pipeline
+//! ```text
+//! +----------------+     +------------------+     +------------------+
+//! | Markdown       |     | Block-Level      |     | PDF Document    |
+//! | Tokens         | --> | Elements         | --> | Generation      |
+//! | (Token enum)   |     | (Block enum)     |     | (genpdf)        |
+//! +----------------+     +------------------+     +------------------+
+//!        |                      |                        |
+//!        |                      |                        |
+//!        v                      v                        v
+//! Text, Headings,     Paragraphs, Lists,       Styled elements with
+//! Lists, etc.         Block Quotes, etc.       fonts and formatting
+//! ```
+//!
+//! Styling Application:
+//! ```text
+//! +--------------+     +---------------+     +------------------+
+//! | Style Match  | --> | Element       | --> | Rendered PDF    |
+//! | Config       |     | Styling       |     | Element         |
+//! +--------------+     +---------------+     +------------------+
+//!       |                     |                      |
+//!       v                     v                      v
+//! Font sizes,        Style properties      Final formatted
+//! colors, etc.       applied to blocks     document elements
+//! ```
 
 use crate::styling::{MdPdfFont, StyleMatch};
 use crate::Token;

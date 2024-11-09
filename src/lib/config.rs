@@ -4,8 +4,39 @@
 //! It provides functionality to customize text styles, colors, margins and other formatting
 //! options for different Markdown elements in the generated PDF.
 //!
-//! # Example Configuration
-//! See `@mdprc.example.toml` for a complete example configuration file.
+//! # Configuration Format
+//! The configuration uses TOML format with sections for different element types:
+//!
+//! - `[margin]` - Document margins
+//! - `[heading.N]` - Heading styles (N=1,2,3)
+//! - `[text]` - Base text style
+//! - `[emphasis]` - Italic text style
+//! - `[strong_emphasis]` - Bold text style
+//! - `[code]` - Code block/inline code style
+//! - `[block_quote]` - Blockquote style
+//! - `[list_item]` - List item style
+//! - `[link]` - Link text style
+//! - `[image]` - Image caption style
+//! - `[horizontal_rule]` - Horizontal rule style
+//!
+//! Each style section supports these properties:
+//!
+//! ```toml
+//! size = 12 # Font size in points
+//! textcolor = { r = 0, g = 0, b = 0 } # RGB text color
+//! backgroundcolor = { r = 255, g = 255, b = 255 } # RGB background color
+//! afterspacing = 0.5 # Vertical spacing after element
+//! alignment = "left" # Text alignment (left|center|right|justify)
+//! fontfamily = "roboto" # Font family name
+//! bold = false # Bold text
+//! italic = false # Italic text
+//! underline = false # Underlined text
+//! strikethrough = false # Strikethrough text
+//! ```
+//!
+//! # Examples
+//!
+//! Basic configuration with custom heading styles:
 //! ```toml
 //! [margin]
 //! top = 8.0
@@ -28,6 +59,31 @@
 //! alignment = "left"
 //! fontfamily = "roboto"
 //! ```
+//!
+//! Custom styles for emphasis and links:
+//! ```toml
+//! [emphasis]
+//! size = 10
+//! textcolor = { r = 100, g = 100, b = 100 }
+//! italic = true
+//!
+//! [link]
+//! textcolor = { r = 0, g = 0, b = 255 }
+//! underline = true
+//! ```
+//!
+//! # Processing Pipeline
+//! ```text
+//! +----------------+     +------------------+     +------------------+
+//! |                |     |                  |     |                  |
+//! | mdprc.toml     | --> | TOML Parser      | --> | Style Objects    |
+//! | Configuration  |     | (parse_style)    |     | (StyleMatch)     |
+//! |                |     |                  |     |                  |
+//! +----------------+     +------------------+     +------------------+
+//! ```
+//!
+//! # Example Configuration
+//! See `@mdprc.example.toml` for a complete example configuration file.
 
 use crate::styling::{BasicTextStyle, Margins, MdPdfFont, StyleMatch, TextAlignment};
 use std::fs;
