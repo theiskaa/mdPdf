@@ -21,3 +21,5 @@ path = "src/bin/main.rs"
 genpdf = { git = "https://github.com/theiskaa/genpdf-rs-improved" }
 thiserror = "1.0.63"
 clap = { version = "4.0", features = ["derive"] }
+dirs = "4.0.0"
+toml = "0.8.19"

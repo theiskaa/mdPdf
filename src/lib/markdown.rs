@@ -1,7 +1,52 @@
+/// Represents the different types of tokens that can be parsed from Markdown text.
+///
+/// # Examples
+/// ```rust
+/// use mdp::Token;
+///
+/// // Heading token with nested content
+/// let heading = Token::Heading(vec![Token::Text("Title".to_string())], 1);
+///
+/// // Emphasis token with nested content
+/// let emphasis = Token::Emphasis {
+///     level: 1,
+///     content: vec![Token::Text("italic".to_string())]
+/// };
+///
+/// // Link token with text and URL
+/// let link = Token::Link("Click here".to_string(), "https://example.com".to_string());
+/// ```
+///
+/// # Token Processing Pipeline
+/// ```text
+/// Input Text           Token Type                          PDF Element
+/// -----------          -------------------------           -------------
+/// # Heading     -->    Token::Heading(vec[], 1)     -->    <h1> styled text
+/// *emphasis*    -->    Token::Emphasis{1, vec[]}    -->    <em> styled text
+/// [link](url)   -->    Token::Link(text, url)       -->    <a> styled link
+/// ```
+///
+/// # Nested Token Structure
+/// ```text
+/// Token::Heading
+///   └── Vec<Token>
+///       ├── Token::Text
+///       ├── Token::Emphasis
+///       │   └── Vec<Token>
+///       │       └── Token::Text
+///       └── Token::Link
+///           ├── text: String
+///           └── url: String
+/// ```
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
+    /// A heading with nested content and level (e.g., # h1, ## h2)
     Heading(Vec<Token>, usize), // (content, level)
-    Emphasis { level: usize, content: Vec<Token> },
+    /// Emphasized text with configurable level (1-3) for * or _ delimiters
+    Emphasis {
+        level: usize,
+        content: Vec<Token>,
+    },
     StrongEmphasis(Vec<Token>),
     Code(String),
     BlockQuote(String),
@@ -21,6 +66,23 @@ pub enum LexerError {
     UnknownToken(String),
 }
 
+/// A lexical analyzer that converts Markdown text into a sequence of tokens.
+/// Handles nested structures and special Markdown syntax elements.
+///
+/// # Examples
+/// ```rust
+/// use mdp::markdown::Lexer;
+///
+/// let mut lexer = Lexer::new("# Hello\n*world*".to_string());
+/// let tokens = lexer.parse().unwrap();
+///
+/// // Parse specific elements
+/// let mut lexer = Lexer::new("**bold text**".to_string());
+/// let emphasis = lexer.parse_emphasis().unwrap();
+///
+/// let mut lexer = Lexer::new("[link](url)".to_string());
+/// let link = lexer.parse_link().unwrap();
+/// ```
 pub struct Lexer {
     input: Vec<char>,
     position: usize,
@@ -35,6 +97,7 @@ impl Lexer {
         }
     }
 
+    /// Parses the entire input string into a sequence of tokens.
     pub fn parse(&mut self) -> Result<Vec<Token>, LexerError> {
         let mut tokens = Vec::new();
 
@@ -47,6 +110,8 @@ impl Lexer {
         Ok(tokens)
     }
 
+    /// Helper function to parse nested content until a delimiter is encountered.
+    /// Used for parsing content within emphasis, headings, and list items.
     fn parse_nested_content<F>(&mut self, is_delimiter: F) -> Result<Vec<Token>, LexerError>
     where
         F: Fn(char) -> bool,
@@ -60,6 +125,8 @@ impl Lexer {
         Ok(content)
     }
 
+    /// Determines the next token in the input stream based on the current character
+    /// and context. Handles special cases like line starts differently.
     fn next_token(&mut self) -> Result<Option<Token>, LexerError> {
         self.skip_whitespace();
 
@@ -96,7 +163,8 @@ impl Lexer {
         let content = self.parse_nested_content(|c| c == '\n')?;
         Ok(Token::Heading(content, level))
     }
-
+    /// Parses emphasis tokens (* or _) with support for multiple levels (1-3).
+    /// Ensures proper matching of opening and closing delimiters.
     fn parse_emphasis(&mut self) -> Result<Token, LexerError> {
         let start_pos = self.position;
         let delimiter = self.current_char();
@@ -141,6 +209,8 @@ impl Lexer {
         Ok(Token::BlockQuote(content))
     }
 
+    /// Handles both list items and horizontal rules since they can start with the same character.
+    /// Checks for three consecutive hyphens to identify a horizontal rule.
     fn parse_list_item_or_horizontal_rule(&mut self) -> Result<Token, LexerError> {
         self.advance();
         self.skip_whitespace();
@@ -192,6 +262,8 @@ impl Lexer {
         Ok(Token::Newline)
     }
 
+    /// Parses regular text until a special token start or newline is encountered.
+    /// Returns an error if no text could be parsed.
     fn parse_text(&mut self) -> Result<Token, LexerError> {
         let mut content = String::new();
         let start_pos = self.position;

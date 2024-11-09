@@ -1,12 +1,12 @@
-use std::fs;
 use clap::{Arg, Command};
+use std::fs;
 
 // TODO: move this help message into another file (txt)
 const HELP: &str = r#"
           _ ___
- _ __  __| | _ \  01101101
-| '  \/ _` |  _/  01100100
-|_|_|_\__,_|_|    01110000
+ _ __  __| | _ \
+| '  \/ _` |  _/
+|_|_|_\__,_|_|
 
 
 Usage: mdp [OPTIONS]
@@ -75,8 +75,7 @@ fn main() {
     let binding = "output.pdf".to_string();
     let output_path = matches.get_one::<String>("output").unwrap_or(&binding);
 
-    mdp::parse(markdown, output_path);
+    let _ = mdp::parse(markdown, output_path);
 
     println!("PDF saved to: {}", output_path);
 }
-
