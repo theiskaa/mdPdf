@@ -16,6 +16,22 @@ cd mdp
 cargo build --release
 ```
 
+## Configuration
+The `mdp` tool supports customization through a TOML configuration file. You can configure various styling options for the generated PDFs by creating a `mdprc.toml` file in your home directory. To get started with configuration:
+
+1. Create the config file:
+   ```bash
+   touch ~/mdprc.toml
+   ```
+
+2. Copy the example configuration:
+   - View the example config at [mdprc.example.toml](mdprc.example.toml)
+   - Copy the contents to your `~/mdprc.toml` file
+   - Modify the values according to your preferences
+
+The configuration file allows you to customize the appearance of your generated PDFs by defining styling options for different Markdown elements.
+
+
 ## Usage
 
 To use the `mdp` tool, you can either specify a Markdown file path, provide Markdown content directly, or set the output PDF path.
