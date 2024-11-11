@@ -198,13 +198,25 @@ impl Lexer {
     fn parse_code(&mut self) -> Result<Token, LexerError> {
         let start_backticks = self.count_backticks();
 
+        // Single backtick case
         if start_backticks == 1 {
-            self.advance(); // skip the backtick
-            let content = self.read_until_char('`');
-            self.advance(); // skip closing backtick
+            let mut content = String::new();
+
+            // Read until either a closing backtick or end of input
+            while self.position < self.input.len() {
+                let ch = self.current_char();
+                if ch == '`' {
+                    self.advance(); // skip closing backtick
+                    break;
+                }
+                content.push(ch);
+                self.advance();
+            }
+
             return Ok(Token::Code(String::new(), content));
         }
 
+        // Multi-line code block case
         self.skip_whitespace();
         let language = self.read_until_newline();
         let mut content = String::new();
@@ -219,9 +231,11 @@ impl Lexer {
             self.advance();
         }
 
-        // Skip closing backticks
+        // Skip closing backticks if they exist
         for _ in 0..start_backticks {
-            self.advance();
+            if self.position < self.input.len() && self.current_char() == '`' {
+                self.advance();
+            }
         }
 
         Ok(Token::Code(
