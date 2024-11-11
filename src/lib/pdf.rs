@@ -91,15 +91,14 @@ impl Pdf {
     }
 
     /// Renders the document to a PDF file at the specified path.
-    pub fn render(document: genpdf::Document, file: &str) {
-        println!("Rendering document to {}", file);
-        match document.render_to_file(file) {
-            Ok(_) => {
-                println!("Successfully saved your PDF to {}", file);
-            }
-            Err(err) => {
-                println!("Failed to save file to {}: {}", file, err);
-            }
+    ///
+    /// # Returns
+    /// * `None` if the file is saved successfully
+    /// * `Some(String)` if an error occurs
+    pub fn render(document: genpdf::Document, path: &str) -> Option<String> {
+        match document.render_to_file(path) {
+            Ok(_) => None,
+            Err(err) => Some(err.to_string()),
         }
     }
 
