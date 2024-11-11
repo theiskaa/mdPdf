@@ -18,7 +18,7 @@ name = "markdown2pdf"
 path = "src/bin/main.rs"
 
 [dependencies]
-genpdf = { git = "https://github.com/theiskaa/genpdf-rs-improved" }
+genpdf = { version = "0.2.0", git = "https://github.com/theiskaa/genpdf-rs-improved" }
 thiserror = "1.0.63"
 clap = { version = "4.0", features = ["derive"] }
 dirs = "4.0.0"
