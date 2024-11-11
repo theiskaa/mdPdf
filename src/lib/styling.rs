@@ -85,7 +85,7 @@
 //! (e.g. "roboto")     (Load TTF files)      (Ready for use in document)
 //! ```
 
-use genpdf::{
+use genpdfi::{
     error::Error,
     fonts::{FontData, FontFamily},
 };
@@ -133,7 +133,7 @@ impl MdPdfFont {
     pub fn load_font_family(family: Option<&str>) -> Result<FontFamily<FontData>, Error> {
         let found_match = MdPdfFont::find_match(family);
         let path = format!("assets/fonts/{}", found_match.dir());
-        genpdf::fonts::from_files(path.as_str(), found_match.file(), None)
+        genpdfi::fonts::from_files(path.as_str(), found_match.file(), None)
     }
 }
 

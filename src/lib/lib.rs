@@ -91,7 +91,7 @@
 //!                        (markdown::Lexer)            (Token enum)
 //!
 //! Token Stream    -->    Style Application      -->   PDF Elements
-//!                        (styling::StyleMatch)        (genpdf)
+//!                        (styling::StyleMatch)        (genpdfi)
 //!
 //! PDF Elements    -->    PDF Generation         -->   Final PDF
 //!                        (pdf::Pdf)                   Document
@@ -103,7 +103,7 @@
 //! |  Markdown   |     |  Tokens        |     |  PDF Elements  |
 //! |  Input      | --> |  # -> Heading  | --> |  - Styled      |
 //! |  # Title    |     |  * -> List     |     |    Heading     |
-//! |  * Item     |     |  > -> Quote    |     |  - List with  |
+//! |  * Item     |     |  > -> Quote    |     |  - List with   |
 //! |  > Quote    |     |                |     |    bullets     |
 //! +-------------+     +----------------+     +----------------+
 //!

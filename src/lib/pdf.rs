@@ -38,7 +38,7 @@
 //! +----------------+     +------------------+     +-----------------+
 //! | Markdown       |     | Block-Level      |     | PDF Document    |
 //! | Tokens         | --> | Elements         | --> | Generation      |
-//! | (Token enum)   |     | (Block enum)     |     | (genpdf)        |
+//! | (Token enum)   |     | (Block enum)     |     | (genpdfi)       |
 //! +----------------+     +------------------+     +-----------------+
 //!        |                      |                        |
 //!        |                      |                        |
@@ -61,10 +61,10 @@
 
 use crate::styling::{MdPdfFont, StyleMatch};
 use crate::Token;
-use genpdf::elements::{Paragraph, UnorderedList};
-use genpdf::fonts::{FontData, FontFamily};
-use genpdf::style::{Color, Style};
-use genpdf::Margins;
+use genpdfi::elements::{Paragraph, UnorderedList};
+use genpdfi::fonts::{FontData, FontFamily};
+use genpdfi::style::{Color, Style};
+use genpdfi::Margins;
 
 /// Represents a block-level element in the document structure.
 #[derive(Debug)]
@@ -95,7 +95,7 @@ impl Pdf {
     /// # Returns
     /// * `None` if the file is saved successfully
     /// * `Some(String)` if an error occurs
-    pub fn render(document: genpdf::Document, path: &str) -> Option<String> {
+    pub fn render(document: genpdfi::Document, path: &str) -> Option<String> {
         match document.render_to_file(path) {
             Ok(_) => None,
             Err(err) => Some(err.to_string()),
@@ -103,15 +103,15 @@ impl Pdf {
     }
 
     /// Creates a PDF document from the markdown tokens using the provided styling.
-    pub fn create_document(self, style_match: StyleMatch) -> genpdf::Document {
+    pub fn create_document(self, style_match: StyleMatch) -> genpdfi::Document {
         let font_family = MdPdfFont::load_font_family(style_match.text.font_family)
             .expect("Failed to load font family");
         let code_font_family = MdPdfFont::load_font_family(style_match.code.font_family)
             .expect("Failed to load code font family");
 
-        let mut doc = genpdf::Document::new(font_family.clone());
+        let mut doc = genpdfi::Document::new(font_family.clone());
         // Set document decorator and margins
-        let mut decorator = genpdf::SimplePageDecorator::new();
+        let mut decorator = genpdfi::SimplePageDecorator::new();
         decorator.set_margins(Margins::trbl(
             style_match.margins.top,
             style_match.margins.right,
@@ -151,7 +151,7 @@ impl Pdf {
                         &style_match,
                     );
                     doc.push(paragraph);
-                    doc.push(genpdf::elements::Break::new(heading_style.after_spacing));
+                    doc.push(genpdfi::elements::Break::new(heading_style.after_spacing));
                 }
                 Block::Paragraph(content) => {
                     let mut style = Style::new().with_font_size(style_match.text.size);
@@ -166,7 +166,9 @@ impl Pdf {
                         &style_match,
                     );
                     doc.push(paragraph);
-                    doc.push(genpdf::elements::Break::new(style_match.text.after_spacing));
+                    doc.push(genpdfi::elements::Break::new(
+                        style_match.text.after_spacing,
+                    ));
                 }
                 Block::List(items) => {
                     let mut list = UnorderedList::new();
@@ -185,7 +187,7 @@ impl Pdf {
                         list.push(item_paragraph);
                     }
                     doc.push(list);
-                    doc.push(genpdf::elements::Break::new(
+                    doc.push(genpdfi::elements::Break::new(
                         style_match.list_item.after_spacing,
                     ));
                 }
@@ -205,7 +207,7 @@ impl Pdf {
                         &style_match,
                     );
                     doc.push(paragraph);
-                    doc.push(genpdf::elements::Break::new(
+                    doc.push(genpdfi::elements::Break::new(
                         style_match.block_quote.after_spacing,
                     ));
                 }
@@ -220,16 +222,18 @@ impl Pdf {
                         para.push_styled(line.to_string(), code_style.clone());
                         doc.push(para);
                     }
-                    doc.push(genpdf::elements::Break::new(style_match.code.after_spacing));
+                    doc.push(genpdfi::elements::Break::new(
+                        style_match.code.after_spacing,
+                    ));
                 }
                 Block::HorizontalRule => {
                     // TODO: implement horizontal rule element.
-                    doc.push(genpdf::elements::Break::new(
+                    doc.push(genpdfi::elements::Break::new(
                         style_match.horizontal_rule.after_spacing,
                     ));
                 }
                 Block::EmptyLine => {
-                    doc.push(genpdf::elements::Break::new(1.0));
+                    doc.push(genpdfi::elements::Break::new(1.0));
                 }
             }
         }
