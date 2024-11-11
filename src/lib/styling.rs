@@ -5,7 +5,7 @@
 //!
 //! # Examples
 //! ```rust
-//! use mdp::styling::StyleMatch;
+//! use markdown2pdf::styling::StyleMatch;
 //!
 //! // Create default styling
 //! let styles = StyleMatch::default();
@@ -17,7 +17,7 @@
 //! ```
 //!
 //! ```rust
-//! use mdp::styling::{BasicTextStyle, TextAlignment};
+//! use markdown2pdf::styling::{BasicTextStyle, TextAlignment};
 //!
 //! // Create custom text style
 //! let custom_style = BasicTextStyle::new(
@@ -78,10 +78,10 @@
 //!
 //! Font Processing:
 //! ```text
-//! +--------------+     +---------------+     +------------------+
+//! +--------------+     +---------------+     +-----------------+
 //! | Font Family  | --> | Font Loading  | --> | PDF Font        |
 //! | Selection    |     | from Assets   |     | Registration    |
-//! +--------------+     +---------------+     +------------------+
+//! +--------------+     +---------------+     +-----------------+
 //! (e.g. "roboto")     (Load TTF files)      (Ready for use in document)
 //! ```
 

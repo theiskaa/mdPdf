@@ -1,24 +1,24 @@
 [package]
-name = "mdp"
+name = "markdown2pdf"
 version = "0.1.0"
 edition = "2021"
 authors = ["Ismael Sh <me@theiskaa.com>"]
 description = "Create PDF with Markdown files (a md to pdf transpiler)"
 readme = "README.md"
 license = "MIT"
-keywords = ["md", "markdown", "pdf"]
-repository = "https://github.com/theiskaa/mdp"
+keywords = ["md", "markdown", "pdf", "markdown-to-pdf", "markdown2pdf"]
+repository = "https://github.com/theiskaa/markdown2pdf"
 
 [lib]
-name = "mdp"
+name = "markdown2pdf"
 path = "src/lib/lib.rs"
 
 [[bin]]
-name = "mdp"
+name = "markdown2pdf"
 path = "src/bin/main.rs"
 
 [dependencies]
-genpdf = { git = "https://github.com/theiskaa/genpdf-rs-improved" }
+genpdf = { version = "0.2.0", git = "https://github.com/theiskaa/genpdf-rs-improved" }
 thiserror = "1.0.63"
 clap = { version = "4.0", features = ["derive"] }
 dirs = "4.0.0"
