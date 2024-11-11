@@ -14,31 +14,31 @@
 //!
 //! Basic markdown-to-pdf conversion:
 //! ```rust
-//! use mdp;
+//! use markdown2pdf;
 //!
 //! // Convert Markdown string to PDF
 //! let markdown = "# Hello World\nThis is a test.".to_string();
-//! if let Err(e) = mdp::parse(markdown, "output.pdf") {
+//! if let Err(e) = markdown2pdf::parse(markdown, "output.pdf") {
 //!     eprintln!("Failed to generate PDF: {}", e);
 //! }
 //! ```
 //!
 //! Converting a file with custom styling:
 //! ```rust
-//! use mdp;
+//! use markdown2pdf;
 //! use std::fs;
 //!
 //! // Read markdown file
 //! let markdown = fs::read_to_string("input.md").unwrap();
 //!
-//! // Create custom styling config (mdprc.toml):
+//! // Create custom styling config (markdown2pdfrc.toml):
 //! // [heading.1]
 //! // size = 24
 //! // textcolor = { r = 0, g = 0, b = 255 }
 //! // bold = true
 //!
 //! // Convert with custom styling
-//! mdp::parse(markdown, "styled-output.pdf").unwrap();
+//! markdown2pdf::parse(markdown, "styled-output.pdf").unwrap();
 //! ```
 //!
 //! Processing markdown with images and links:
@@ -51,11 +51,11 @@
 //! See our [website](https://example.com) for more info.
 //! "#.to_string();
 //!
-//! mdp::parse(markdown, "doc-with-images.pdf").unwrap();
+//! markdown2pdf::parse(markdown, "doc-with-images.pdf").unwrap();
 //! ```
 //!
 //! # Configuration
-//! Styling can be customized through a TOML configuration file (`mdprc.toml`).
+//! Styling can be customized through a TOML configuration file (`markdown2pdfrc.toml`).
 //!
 //! ## Page Layout
 //! ```toml
@@ -154,7 +154,7 @@ impl fmt::Display for MdpError {
 ///
 /// This function handles the complete conversion process:
 /// 1. Parses the Markdown content into tokens
-/// 2. Loads styling configuration from `mdprc.toml` if available
+/// 2. Loads styling configuration from `markdown2pdfrc.toml` if available
 /// 3. Generates a PDF document with the configured styling
 ///
 /// # Arguments
@@ -169,7 +169,7 @@ impl fmt::Display for MdpError {
 /// ```rust
 /// // Convert a Markdown file to PDF with custom styling
 /// let markdown = std::fs::read_to_string("input.md").unwrap();
-/// let result = mdp::parse(markdown, "output.pdf");
+/// let result = markdown2pdf::parse(markdown, "output.pdf");
 /// if let Err(e) = result {
 ///     eprintln!("Conversion failed: {}", e);
 /// }

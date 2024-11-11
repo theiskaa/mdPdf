@@ -2,7 +2,7 @@
 ///
 /// # Examples
 /// ```rust
-/// use mdp::Token;
+/// use markdown2pdf::Token;
 ///
 /// // Heading token with nested content
 /// let heading = Token::Heading(vec![Token::Text("Title".to_string())], 1);
@@ -72,7 +72,7 @@ pub enum LexerError {
 ///
 /// # Examples
 /// ```rust
-/// use mdp::markdown::Lexer;
+/// use markdown2pdf::markdown::Lexer;
 ///
 /// let mut lexer = Lexer::new("# Hello\n*world*".to_string());
 /// let tokens = lexer.parse().unwrap();

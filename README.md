@@ -1,5 +1,5 @@
-# mdp
-mdp is a versatile command-line tool and library designed to convert Markdown content into pre-styled PDF documents. It supports reading Markdown from a file or directly from a string, offering flexibility for both users and developers.
+# markdown2pdf
+markdown2pdf is a versatile command-line tool and library designed to convert Markdown content into pre-styled PDF documents. It supports reading Markdown from a file or directly from a string, offering flexibility for both users and developers.
 
 This project includes both a binary and a library:
 - **Binary (cli)**: A command-line interface that uses the core library to provide an easy way to convert Markdown to PDF.
@@ -11,22 +11,22 @@ This project includes both a binary and a library:
 Currently, there isn't a simplified official method to install the command-line tool across platforms. To use it, you can clone the repository and build the project yourself using Cargo:
 
 ```bash
-git clone https://github.com/theiskaa/mdp.git
-cd mdp
+git clone https://github.com/theiskaa/markdown2pdf.git
+cd markdown2pdf
 cargo build --release
 ```
 
 ## Configuration
-The `mdp` tool supports customization through a TOML configuration file. You can configure various styling options for the generated PDFs by creating a `mdprc.toml` file in your home directory. To get started with configuration:
+The `markdown2pdf` tool supports customization through a TOML configuration file. You can configure various styling options for the generated PDFs by creating a `markdown2pdfrc.toml` file in your home directory. To get started with configuration:
 
 1. Create the config file:
    ```bash
-   touch ~/mdprc.toml
+   touch ~/markdown2pdfrc.toml
    ```
 
 2. Copy the example configuration:
-   - View the example config at [mdprc.example.toml](mdprc.example.toml)
-   - Copy the contents to your `~/mdprc.toml` file
+   - View the example config at [markdown2pdfrc.example.toml](markdown2pdfrc.example.toml)
+   - Copy the contents to your `~/markdown2pdfrc.toml` file
    - Modify the values according to your preferences
 
 The configuration file allows you to customize the appearance of your generated PDFs by defining styling options for different Markdown elements.
@@ -34,7 +34,7 @@ The configuration file allows you to customize the appearance of your generated 
 
 ## Usage
 
-To use the `mdp` tool, you can either specify a Markdown file path, provide Markdown content directly, or set the output PDF path.
+To use the `markdown2pdf` tool, you can either specify a Markdown file path, provide Markdown content directly, or set the output PDF path.
 
 ### Options
 
@@ -47,7 +47,7 @@ To use the `mdp` tool, you can either specify a Markdown file path, provide Mark
 1. Convert a Markdown file to a PDF:
 
    ```bash
-   mdp -p "docs/resume.md" -o "resume.pdf"
+   markdown2pdf -p "docs/resume.md" -o "resume.pdf"
    ```
 
    This will convert the `resume.md` file located in the `docs` folder to a PDF file named `resume.pdf`.
@@ -55,7 +55,7 @@ To use the `mdp` tool, you can either specify a Markdown file path, provide Mark
 2. Convert Markdown content provided as a string:
 
    ```bash
-   mdp -s "# My Markdown Title\n\nThis is content." -o "output.pdf"
+   markdown2pdf -s "# My Markdown Title\n\nThis is content." -o "output.pdf"
    ```
 
    This will convert the provided Markdown string to a PDF file named `output.pdf`.
@@ -63,7 +63,7 @@ To use the `mdp` tool, you can either specify a Markdown file path, provide Mark
 3. Convert a Markdown file to a PDF with default output:
 
    ```bash
-   mdp -p "file.md"
+   markdown2pdf -p "file.md"
    ```
 
    This will convert the `file.md` to a PDF and save it as `output.pdf`.

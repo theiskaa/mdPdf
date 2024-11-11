@@ -7,9 +7,9 @@
 //!
 //! Basic PDF generation:
 //! ```rust
-//! use mdp::pdf::Pdf;
-//! use mdp::styling::StyleMatch;
-//! use mdp::Token;
+//! use markdown2pdf::pdf::Pdf;
+//! use markdown2pdf::styling::StyleMatch;
+//! use markdown2pdf::Token;
 //!
 //! // Create tokens from markdown
 //! let tokens = vec![Token::Text("Hello world".to_string())];
@@ -22,8 +22,8 @@
 //!
 //! Custom styling:
 //! ```rust
-//! use mdp::pdf::Pdf;
-//! use mdp::styling::{StyleMatch, BasicTextStyle};
+//! use markdown2pdf::pdf::Pdf;
+//! use markdown2pdf::styling::{StyleMatch, BasicTextStyle};
 //!
 //! let mut styles = StyleMatch::default();
 //! styles.heading_1.size = 24; // Large headings
@@ -35,11 +35,11 @@
 //!
 //! # Processing Pipeline
 //! ```text
-//! +----------------+     +------------------+     +------------------+
+//! +----------------+     +------------------+     +-----------------+
 //! | Markdown       |     | Block-Level      |     | PDF Document    |
 //! | Tokens         | --> | Elements         | --> | Generation      |
 //! | (Token enum)   |     | (Block enum)     |     | (genpdf)        |
-//! +----------------+     +------------------+     +------------------+
+//! +----------------+     +------------------+     +-----------------+
 //!        |                      |                        |
 //!        |                      |                        |
 //!        v                      v                        v
@@ -49,10 +49,10 @@
 //!
 //! Styling Application:
 //! ```text
-//! +--------------+     +---------------+     +------------------+
+//! +--------------+     +---------------+     +-----------------+
 //! | Style Match  | --> | Element       | --> | Rendered PDF    |
 //! | Config       |     | Styling       |     | Element         |
-//! +--------------+     +---------------+     +------------------+
+//! +--------------+     +---------------+     +-----------------+
 //!       |                     |                      |
 //!       v                     v                      v
 //! Font sizes,        Style properties      Final formatted

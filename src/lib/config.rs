@@ -74,16 +74,16 @@
 //!
 //! # Processing Pipeline
 //! ```text
-//! +----------------+     +------------------+     +------------------+
-//! |                |     |                  |     |                  |
-//! | mdprc.toml     | --> | TOML Parser      | --> | Style Objects    |
-//! | Configuration  |     | (parse_style)    |     | (StyleMatch)     |
-//! |                |     |                  |     |                  |
-//! +----------------+     +------------------+     +------------------+
+//! +---------------------+     +----------------+     +----------------+
+//! |                     |     |                |     |                |
+//! | markdown2pdfrc.toml | --> | TOML Parser    | --> | Style Objects  |
+//! | Configuration       |     | (parse_style)  |     | (StyleMatch)   |
+//! |                     |     |                |     |                |
+//! +---------------------+     +----------------+     +----------------+
 //! ```
 //!
 //! # Example Configuration
-//! See `@mdprc.example.toml` for a complete example configuration file.
+//! See `@markdown2pdfrc.example.toml` for a complete example configuration file.
 
 use crate::styling::{BasicTextStyle, Margins, MdPdfFont, StyleMatch, TextAlignment};
 use std::fs;
@@ -195,7 +195,7 @@ fn parse_style(value: Option<&Value>, default: BasicTextStyle) -> BasicTextStyle
 
 /// Loads and parses the complete styling configuration.
 ///
-/// Attempts to read styling configuration from mdprc.toml file.
+/// Attempts to read styling configuration from markdown2pdfrc.toml file.
 /// Falls back to default styles if the file is missing or invalid.
 ///
 /// # Returns
@@ -203,7 +203,7 @@ fn parse_style(value: Option<&Value>, default: BasicTextStyle) -> BasicTextStyle
 ///
 /// # Example
 /// ```rust
-/// use mdp::config;
+/// use markdown2pdf::config;
 ///
 /// let styles = config::load_config();
 /// // Use styles for PDF generation
@@ -212,10 +212,10 @@ pub fn load_config() -> StyleMatch {
     // Try to read config from home directory first, fall back to current directory
     let config_path = dirs::home_dir()
         .map(|mut path| {
-            path.push("mdprc.toml");
+            path.push("markdown2pdfrc.toml");
             path
         })
-        .unwrap_or_else(|| Path::new("mdprc.toml").to_path_buf());
+        .unwrap_or_else(|| Path::new("markdown2pdfrc.toml").to_path_buf());
 
     let config_str = match fs::read_to_string(config_path) {
         Ok(s) => s,
