@@ -217,7 +217,6 @@ pub fn load_config() -> StyleMatch {
         })
         .unwrap_or_else(|| Path::new("mdprc.toml").to_path_buf());
 
-    println!("config_path: {:?}", config_path);
     let config_str = match fs::read_to_string(config_path) {
         Ok(s) => s,
         Err(_) => return StyleMatch::default(),
