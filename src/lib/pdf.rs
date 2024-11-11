@@ -68,11 +68,13 @@ use genpdf::Margins;
 
 /// Represents a block-level element in the document structure.
 #[derive(Debug)]
+#[allow(dead_code)]
 enum Block {
     Heading(Vec<Token>, usize), // (content, level [1-6])
     Paragraph(Vec<Token>),
     List(Vec<Vec<Token>>),
     BlockQuote(Vec<Token>),
+    CodeBlock(String, String), // (language, content)
     HorizontalRule,
     EmptyLine,
 }
@@ -89,14 +91,14 @@ impl Pdf {
     }
 
     /// Renders the document to a PDF file at the specified path.
-    pub fn render(document: genpdf::Document, file: &str) {
-        match document.render_to_file(file) {
-            Ok(_) => {
-                println!("Successfully saved your PDF to {}", file);
-            }
-            Err(err) => {
-                println!("Failed to save file to {}: {}", file, err);
-            }
+    ///
+    /// # Returns
+    /// * `None` if the file is saved successfully
+    /// * `Some(String)` if an error occurs
+    pub fn render(document: genpdf::Document, path: &str) -> Option<String> {
+        match document.render_to_file(path) {
+            Ok(_) => None,
+            Err(err) => Some(err.to_string()),
         }
     }
 
@@ -207,6 +209,19 @@ impl Pdf {
                         style_match.block_quote.after_spacing,
                     ));
                 }
+                Block::CodeBlock(_, content) => {
+                    let mut code_style = Style::new().with_font_size(style_match.code.size);
+                    if let Some(color) = style_match.code.text_color {
+                        code_style = code_style.with_color(Color::Rgb(color.0, color.1, color.2));
+                    }
+
+                    for line in content.split('\n') {
+                        let mut para = Paragraph::default();
+                        para.push_styled(line.to_string(), code_style.clone());
+                        doc.push(para);
+                    }
+                    doc.push(genpdf::elements::Break::new(style_match.code.after_spacing));
+                }
                 Block::HorizontalRule => {
                     // TODO: implement horizontal rule element.
                     doc.push(genpdf::elements::Break::new(
@@ -282,6 +297,15 @@ impl Pdf {
                     idx += 1;
                     newline_count = 0;
                 }
+                Token::Code(lang, content) if content.contains('\n') => {
+                    if !current_inline_content.is_empty() {
+                        blocks.push(Block::Paragraph(current_inline_content.clone()));
+                        current_inline_content.clear();
+                    }
+                    blocks.push(Block::CodeBlock(lang.clone(), content.clone()));
+                    idx += 1;
+                    newline_count = 0;
+                }
                 Token::HorizontalRule => {
                     if !current_inline_content.is_empty() {
                         blocks.push(Block::Paragraph(current_inline_content.clone()));
@@ -310,7 +334,7 @@ impl Pdf {
                 Token::Text(_)
                 | Token::Emphasis { .. }
                 | Token::StrongEmphasis(_)
-                | Token::Code(_)
+                | Token::Code(_, _)
                 | Token::Link(_, _) => {
                     current_inline_content.push(tokens[idx].clone());
                     idx += 1;
@@ -416,7 +440,7 @@ impl Pdf {
                     // This workaround should be moved to the lexer level for a proper fix.
                     paragraph.push_link(format!("{} ", text), url, link_style);
                 }
-                Token::Code(content) => {
+                Token::Code(_language, content) => {
                     let mut code_style = style.clone();
                     if let Some(color) = style_match.code.text_color {
                         code_style = code_style.with_color(Color::Rgb(color.0, color.1, color.2));

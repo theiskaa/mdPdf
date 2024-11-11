@@ -175,18 +175,18 @@ impl fmt::Display for MdpError {
 /// }
 /// ```
 pub fn parse(markdown: String, path: &str) -> Result<(), MdpError> {
-    // Create lexer and parse markdown tokens
     let mut lexer = Lexer::new(markdown);
     let tokens = lexer
         .parse()
         .map_err(|e| MdpError::ParseError(format!("Failed to parse markdown: {:?}", e)))?;
 
-    // Create PDF parser with default styling
     let parser = Pdf::new(tokens);
     let style = config::load_config();
     let document = parser.create_document(style);
 
-    // Render PDF to file
-    Pdf::render(document, path);
+    if let Some(err) = Pdf::render(document, path) {
+        return Err(MdpError::PdfError(err));
+    }
+
     Ok(())
 }

@@ -48,7 +48,8 @@ pub enum Token {
         content: Vec<Token>,
     },
     StrongEmphasis(Vec<Token>),
-    Code(String),
+    /// Code block with language specification and content
+    Code(String, String),
     BlockQuote(String),
     ListItem(Vec<Token>),
     Link(String, String),  // (text, url)
@@ -88,7 +89,6 @@ pub struct Lexer {
     position: usize,
 }
 
-#[allow(dead_code)]
 impl Lexer {
     pub fn new(input: String) -> Self {
         Lexer {
@@ -196,10 +196,62 @@ impl Lexer {
     }
 
     fn parse_code(&mut self) -> Result<Token, LexerError> {
-        self.advance();
-        let content = self.read_until_char('`');
-        self.advance();
-        Ok(Token::Code(content))
+        let start_backticks = self.count_backticks();
+
+        // Single backtick case
+        if start_backticks == 1 {
+            let mut content = String::new();
+
+            // Read until either a closing backtick or end of input
+            while self.position < self.input.len() {
+                let ch = self.current_char();
+                if ch == '`' {
+                    self.advance(); // skip closing backtick
+                    break;
+                }
+                content.push(ch);
+                self.advance();
+            }
+
+            return Ok(Token::Code(String::new(), content));
+        }
+
+        // Multi-line code block case
+        self.skip_whitespace();
+        let language = self.read_until_newline();
+        let mut content = String::new();
+
+        while self.position < self.input.len() {
+            let current_backticks = self.count_backticks();
+            if current_backticks == start_backticks {
+                break;
+            }
+
+            content.push(self.current_char());
+            self.advance();
+        }
+
+        // Skip closing backticks if they exist
+        for _ in 0..start_backticks {
+            if self.position < self.input.len() && self.current_char() == '`' {
+                self.advance();
+            }
+        }
+
+        Ok(Token::Code(
+            language.trim().to_string(),
+            content.trim().to_string(),
+        ))
+    }
+
+    // Helper method to count consecutive backticks
+    fn count_backticks(&mut self) -> usize {
+        let mut count = 0;
+        while self.position < self.input.len() && self.current_char() == '`' {
+            count += 1;
+            self.advance();
+        }
+        count
     }
 
     fn parse_blockquote(&mut self) -> Result<Token, LexerError> {

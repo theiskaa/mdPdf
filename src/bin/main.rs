@@ -72,10 +72,17 @@ fn main() {
         return;
     };
 
-    let binding = "output.pdf".to_string();
-    let output_path = matches.get_one::<String>("output").unwrap_or(&binding);
+    let current_dir = std::env::current_dir().expect("Failed to get current directory");
+    let binding = current_dir.join("output.pdf");
+    let output_path = matches
+        .get_one::<String>("output")
+        .map(|p| current_dir.join(p))
+        .unwrap_or(binding);
+    let output_path = output_path.to_str().expect("Invalid output path");
 
-    let _ = mdp::parse(markdown, output_path);
-
-    println!("PDF saved to: {}", output_path);
+    let result = mdp::parse(markdown, output_path);
+    match result {
+        Ok(_) => println!("[OK] Saved PDF to {}", output_path),
+        Err(e) => println!("[ERROR] Failed to transpile markdown:\n> {}", e),
+    }
 }
