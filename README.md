@@ -8,12 +8,16 @@ This project includes both a binary and a library:
 > **Note:** This project is currently under active development, with ongoing improvements and new features being added.
 
 ## Installation
-Currently, there isn't a simplified official method to install the command-line tool across platforms. To use it, you can clone the repository and build the project yourself using Cargo:
+You can install the `markdown2pdf` binary globally using cargo by running:
+```bash
+cargo install markdown2pdf
+```
 
+Alternatively, you can build from source by cloning the repository and using `Makefile`:
 ```bash
 git clone https://github.com/theiskaa/markdown2pdf.git
 cd markdown2pdf
-cargo build --release
+make build-in-local
 ```
 
 ## Configuration
@@ -31,9 +35,7 @@ The `markdown2pdf` tool supports customization through a TOML configuration file
 
 The configuration file allows you to customize the appearance of your generated PDFs by defining styling options for different Markdown elements.
 
-
 ## Usage
-
 To use the `markdown2pdf` tool, you can either specify a Markdown file path, provide Markdown content directly, or set the output PDF path.
 
 ### Options
@@ -45,7 +47,6 @@ To use the `markdown2pdf` tool, you can either specify a Markdown file path, pro
 ### Examples
 
 1. Convert a Markdown file to a PDF:
-
    ```bash
    markdown2pdf -p "docs/resume.md" -o "resume.pdf"
    ```
@@ -53,7 +54,6 @@ To use the `markdown2pdf` tool, you can either specify a Markdown file path, pro
    This will convert the `resume.md` file located in the `docs` folder to a PDF file named `resume.pdf`.
 
 2. Convert Markdown content provided as a string:
-
    ```bash
    markdown2pdf -s "# My Markdown Title\n\nThis is content." -o "output.pdf"
    ```
@@ -61,7 +61,6 @@ To use the `markdown2pdf` tool, you can either specify a Markdown file path, pro
    This will convert the provided Markdown string to a PDF file named `output.pdf`.
 
 3. Convert a Markdown file to a PDF with default output:
-
    ```bash
    markdown2pdf -p "file.md"
    ```
@@ -69,6 +68,8 @@ To use the `markdown2pdf` tool, you can either specify a Markdown file path, pro
    This will convert the `file.md` to a PDF and save it as `output.pdf`.
 
 ### Notes
-
 - If both `-p` and `-s` options are provided, the `--path` option will take precedence.
 - If no output file is specified using the `-o` option, the default output file will be named `output.pdf`.
+
+## Contributing
+For information regarding contributions, please refer to [CONTRIBUTING.md](CONTRIBUTING.md) file.
