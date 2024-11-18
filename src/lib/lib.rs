@@ -121,6 +121,7 @@
 //! - `pdf`: Manages PDF document generation
 //! - `styling`: Defines styling types and defaults
 
+pub mod assets;
 pub mod config;
 pub mod markdown;
 pub mod pdf;
