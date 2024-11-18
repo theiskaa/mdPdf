@@ -85,6 +85,7 @@
 //! (e.g. "roboto")     (Load TTF files)      (Ready for use in document)
 //! ```
 
+use crate::assets;
 use genpdfi::{
     error::Error,
     fonts::{FontData, FontFamily},
@@ -123,7 +124,7 @@ impl MdPdfFont {
         }
     }
 
-    /// Loads a font family from files in the assets directory.
+    /// Loads a font family from embedded assets
     ///
     /// # Arguments
     /// * `family` - Optional font family name to load
@@ -132,8 +133,33 @@ impl MdPdfFont {
     /// Result containing the loaded FontFamily or an Error
     pub fn load_font_family(family: Option<&str>) -> Result<FontFamily<FontData>, Error> {
         let found_match = MdPdfFont::find_match(family);
-        let path = format!("assets/fonts/{}", found_match.dir());
-        genpdfi::fonts::from_files(path.as_str(), found_match.file(), None)
+
+        // Load each font variant from embedded assets
+        let regular = MdPdfFont::load_font_variant(found_match, "Regular")?;
+        let bold = MdPdfFont::load_font_variant(found_match, "Bold")?;
+        let italic = MdPdfFont::load_font_variant(found_match, "Italic")?;
+        let bold_italic = MdPdfFont::load_font_variant(found_match, "BoldItalic")?;
+
+        Ok(FontFamily {
+            regular,
+            bold,
+            italic,
+            bold_italic,
+        })
+    }
+
+    /// Helper function to load a specific font variant from embedded assets
+    pub fn load_font_variant(font: MdPdfFont, variant: &str) -> Result<FontData, Error> {
+        let font_path = format!("fonts/{}/{}-{}.ttf", font.dir(), font.file(), variant);
+
+        let font_data = assets::get_font_data(&font_path).ok_or_else(|| {
+            Error::new(
+                format!("Failed to load embedded font: {}", font_path),
+                genpdfi::error::ErrorKind::InvalidFont,
+            )
+        })?;
+
+        FontData::new(font_data, None)
     }
 }
 
