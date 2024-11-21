@@ -4,86 +4,29 @@
 //! It provides functionality to customize text styles, colors, margins and other formatting
 //! options for different Markdown elements in the generated PDF.
 //!
-//! # Configuration Format
-//! The configuration uses TOML format with sections for different element types:
+//! The configuration uses TOML format with sections for different element types. The margin
+//! section controls document margins. Heading styles can be customized per level (1-3).
+//! Base text style defines the default text appearance. Emphasis sections handle italic text.
+//! Strong emphasis controls bold text styling. Code sections format code blocks and inline code.
+//! Block quote sections style quoted text. List item sections format list entries. Link and
+//! image sections control how those elements appear. A horizontal rule section styles divider lines.
 //!
-//! - `[margin]` - Document margins
-//! - `[heading.N]` - Heading styles (N=1,2,3)
-//! - `[text]` - Base text style
-//! - `[emphasis]` - Italic text style
-//! - `[strong_emphasis]` - Bold text style
-//! - `[code]` - Code block/inline code style
-//! - `[block_quote]` - Blockquote style
-//! - `[list_item]` - List item style
-//! - `[link]` - Link text style
-//! - `[image]` - Image caption style
-//! - `[horizontal_rule]` - Horizontal rule style
+//! Each style section supports properties for customizing the appearance. Font size is specified
+//! in points. Text and background colors use RGB values. Vertical spacing after elements can be
+//! set. Text alignment options include left, center, right and justify. Font family specifies
+//! the typeface. Boolean flags control bold, italic, underline and strikethrough decorations.
 //!
-//! Each style section supports these properties:
+//! The configuration can be defined in a TOML file. Basic configuration might customize heading
+//! styles with specific sizes, colors and alignment. Text styles control the base paragraph
+//! appearance. Custom emphasis styles can modify how italic and bold text renders. Link styles
+//! determine how hyperlinks are displayed.
 //!
-//! ```toml
-//! size = 12 # Font size in points
-//! textcolor = { r = 0, g = 0, b = 0 } # RGB text color
-//! backgroundcolor = { r = 255, g = 255, b = 255 } # RGB background color
-//! afterspacing = 0.5 # Vertical spacing after element
-//! alignment = "left" # Text alignment (left|center|right|justify)
-//! fontfamily = "roboto" # Font family name
-//! bold = false # Bold text
-//! italic = false # Italic text
-//! underline = false # Underlined text
-//! strikethrough = false # Strikethrough text
-//! ```
+//! The configuration processing follows a pipeline where the TOML file is parsed into style
+//! objects that control the PDF generation. The parser extracts style properties and creates
+//! corresponding style objects used during rendering.
 //!
-//! # Examples
-//!
-//! Basic configuration with custom heading styles:
-//! ```toml
-//! [margin]
-//! top = 8.0
-//! right = 8.0
-//! bottom = 8.0
-//! left = 8.0
-//!
-//! [heading.1]
-//! size = 14
-//! textcolor = { r = 0, g = 0, b = 0 }
-//! afterspacing = 0.5
-//! alignment = "center"
-//! fontfamily = "roboto"
-//! bold = true
-//!
-//! [text]
-//! size = 8
-//! textcolor = { r = 0, g = 0, b = 0 }
-//! afterspacing = 0.0
-//! alignment = "left"
-//! fontfamily = "roboto"
-//! ```
-//!
-//! Custom styles for emphasis and links:
-//! ```toml
-//! [emphasis]
-//! size = 10
-//! textcolor = { r = 100, g = 100, b = 100 }
-//! italic = true
-//!
-//! [link]
-//! textcolor = { r = 0, g = 0, b = 255 }
-//! underline = true
-//! ```
-//!
-//! # Processing Pipeline
-//! ```text
-//! +---------------------+     +----------------+     +----------------+
-//! |                     |     |                |     |                |
-//! | markdown2pdfrc.toml | --> | TOML Parser    | --> | Style Objects  |
-//! | Configuration       |     | (parse_style)  |     | (StyleMatch)   |
-//! |                     |     |                |     |                |
-//! +---------------------+     +----------------+     +----------------+
-//! ```
-//!
-//! # Example Configuration
-//! See `@markdown2pdfrc.example.toml` for a complete example configuration file.
+//! A complete example configuration file can be found in markdown2pdfrc.example.toml which
+//! demonstrates all available styling options.
 
 use crate::styling::{BasicTextStyle, Margins, MdPdfFont, StyleMatch, TextAlignment};
 use std::fs;
@@ -92,13 +35,10 @@ use toml::Value;
 
 /// Parses an RGB color from a TOML configuration value.
 ///
-/// # Arguments
-/// * `value` - Optional TOML value containing a color object
-/// * `field` - Name of the color field to parse
-///
-/// # Returns
-/// * `Some((r,g,b))` - RGB color values if parsing succeeds
-/// * `None` - If the color value is missing or invalid
+/// The value parameter provides an optional TOML value containing a color object.
+/// The field parameter specifies which color field to parse from the configuration.
+/// Returns the RGB color values as a tuple if parsing succeeds, or None if the color
+/// value is missing or invalid.
 fn parse_color(value: Option<&Value>, field: &str) -> Option<(u8, u8, u8)> {
     value.and_then(|c| {
         let color = c.get(field)?;
@@ -111,12 +51,9 @@ fn parse_color(value: Option<&Value>, field: &str) -> Option<(u8, u8, u8)> {
 
 /// Parses text alignment from TOML configuration.
 ///
-/// # Arguments
-/// * `value` - Optional TOML value containing alignment string
-///
-/// # Returns
-/// * `Some(TextAlignment)` - Parsed alignment value
-/// * `None` - If alignment value is missing
+/// Takes an optional TOML value containing the alignment string specification.
+/// Returns the corresponding TextAlignment enum value if parsing succeeds,
+/// or None if the alignment value is missing from the configuration.
 fn parse_alignment(value: Option<&Value>) -> Option<TextAlignment> {
     value.and_then(|v| v.as_str()).map(|s| match s {
         "left" => TextAlignment::Left,
@@ -129,27 +66,20 @@ fn parse_alignment(value: Option<&Value>) -> Option<TextAlignment> {
 
 /// Maps a font family name to its corresponding font file path.
 ///
-/// # Arguments
-/// * `font` - Name of the font family
-///
-/// # Returns
-/// * `Some(&str)` - Path to the font file if found
-/// * `None` - If font is not available
+/// Takes the name of the font family as input and attempts to find a matching
+/// font file. Returns the path to the font file if found, or None if the
+/// specified font is not available in the system.
 fn map_font_family(font: &str) -> Option<&'static str> {
     Some(MdPdfFont::find_match(Some(font)).file())
 }
 
 /// Parses a complete text style configuration from TOML.
 ///
-/// Handles all style properties including size, spacing, colors,
-/// alignment, font family and text decorations.
-///
-/// # Arguments
-/// * `value` - Optional TOML value containing style configuration
-/// * `default` - Default style to use for missing properties
-///
-/// # Returns
-/// Complete `BasicTextStyle` with parsed or default values
+/// Processes all style properties including size, spacing, colors, alignment,
+/// font family and text decorations. Takes an optional TOML value containing
+/// the style configuration and a default style to use for missing properties.
+/// Returns a complete BasicTextStyle with all properties set to either parsed
+/// or default values.
 fn parse_style(value: Option<&Value>, default: BasicTextStyle) -> BasicTextStyle {
     let mut style = default.clone();
     if let Some(style_config) = value {
@@ -195,19 +125,11 @@ fn parse_style(value: Option<&Value>, default: BasicTextStyle) -> BasicTextStyle
 
 /// Loads and parses the complete styling configuration.
 ///
-/// Attempts to read styling configuration from markdown2pdfrc.toml file.
-/// Falls back to default styles if the file is missing or invalid.
-///
-/// # Returns
-/// Complete `StyleMatch` containing all style configurations
-///
-/// # Example
-/// ```rust
-/// use markdown2pdf::config;
-///
-/// let styles = config::load_config();
-/// // Use styles for PDF generation
-/// ```
+/// Attempts to read styling configuration from the markdown2pdfrc.toml file.
+/// First checks the user's home directory for the config file, then falls back
+/// to the current directory. If no config file is found or if parsing fails,
+/// returns default styles. The function processes all style sections and
+/// returns a complete StyleMatch object containing the full configuration.
 pub fn load_config() -> StyleMatch {
     // Try to read config from home directory first, fall back to current directory
     let config_path = dirs::home_dir()

@@ -1,18 +1,12 @@
-//! Core library module for markdown-to-pdf conversion with customizable styling.
+//! The markdown2pdf library enables conversion of Markdown content into professionally styled PDF documents.
+//! It provides a complete pipeline for parsing Markdown text, applying configurable styling rules, and
+//! generating polished PDF output.
 //!
-//! This library provides functionality to convert Markdown content into styled PDF documents.
-//! It handles parsing Markdown text into tokens, applying configurable styling, and generating
-//! the final PDF output.
+//! The library handles the intricacies of Markdown parsing and PDF generation while giving users control
+//! over the visual presentation through styling configuration. Users can customize fonts, colors, spacing,
+//! and other visual properties via a TOML configuration file.
 //!
-//! # Features
-//! - Parse Markdown files or strings into PDF documents
-//! - Customizable styling via TOML configuration files
-//! - Support for common Markdown elements like headings, emphasis, lists, etc.
-//! - Configurable margins, fonts, colors, and text properties
-//!
-//! # Examples
-//!
-//! Basic markdown-to-pdf conversion:
+//! Basic usage involves passing Markdown content as a string along with an output path:
 //! ```rust
 //! use markdown2pdf;
 //!
@@ -23,7 +17,8 @@
 //! }
 //! ```
 //!
-//! Converting a file with custom styling:
+//! For more control over the output styling, users can create a configuration file (markdown2pdfrc.toml)
+//! to specify custom visual properties:
 //! ```rust
 //! use markdown2pdf;
 //! use std::fs;
@@ -31,17 +26,11 @@
 //! // Read markdown file
 //! let markdown = fs::read_to_string("input.md").unwrap();
 //!
-//! // Create custom styling config (markdown2pdfrc.toml):
-//! // [heading.1]
-//! // size = 24
-//! // textcolor = { r = 0, g = 0, b = 255 }
-//! // bold = true
-//!
-//! // Convert with custom styling
+//! // Convert with custom styling from markdown2pdfrc.toml
 //! markdown2pdf::parse(markdown, "styled-output.pdf").unwrap();
 //! ```
 //!
-//! Processing markdown with images and links:
+//! The library also handles rich content like images and links seamlessly:
 //! ```rust
 //! let markdown = r#"
 //! # Document Title
@@ -54,10 +43,8 @@
 //! markdown2pdf::parse(markdown, "doc-with-images.pdf").unwrap();
 //! ```
 //!
-//! # Configuration
-//! Styling can be customized through a TOML configuration file (`markdown2pdfrc.toml`).
-//!
-//! ## Page Layout
+//! The styling configuration file supports comprehensive customization of the document appearance.
+//! Page layout properties control the overall document structure:
 //! ```toml
 //! [page]
 //! margins = { top = 72, right = 72, bottom = 72, left = 72 }
@@ -65,7 +52,7 @@
 //! orientation = "portrait"
 //! ```
 //!
-//! ## Element Styling
+//! Individual elements can be styled with precise control:
 //! ```toml
 //! [heading.1]
 //! size = 24
@@ -83,26 +70,16 @@
 //! fontfamily = "roboto-mono"
 //! ```
 //!
-//! # Processing Pipeline
-//! ```text
-//! Input                  Processing                   Output
-//! -------------          ----------------             ----------------
-//! Markdown Text    -->   Lexical Analysis       -->   Token Stream
-//!                        (markdown::Lexer)            (Token enum)
-//!
-//! Token Stream    -->    Style Application      -->   PDF Elements
-//!                        (styling::StyleMatch)        (genpdfi)
-//!
-//! PDF Elements    -->    PDF Generation         -->   Final PDF
-//!                        (pdf::Pdf)                   Document
-//! ```
+//! The conversion process follows a carefully structured pipeline. First, the Markdown text undergoes
+//! lexical analysis to produce a stream of semantic tokens. These tokens then receive styling rules
+//! based on the configuration. Finally, the styled elements are rendered into the PDF document.
 //!
 //! ## Token Processing Flow
 //! ```text
 //! +-------------+     +----------------+     +----------------+
 //! |  Markdown   |     |  Tokens        |     |  PDF Elements  |
-//! |  Input      | --> |  # -> Heading  | --> |  - Styled      |
-//! |  # Title    |     |  * -> List     |     |    Heading     |
+//! |  Input      |     |  # -> Heading  |     |  - Styled      |
+//! |  # Title    | --> |  * -> List     | --> |    Heading     |
 //! |  * Item     |     |  > -> Quote    |     |  - List with   |
 //! |  > Quote    |     |                |     |    bullets     |
 //! +-------------+     +----------------+     +----------------+
@@ -114,12 +91,6 @@
 //! | - Margins     |     | - Styles         |     | PDF Document |
 //! +---------------+     +------------------+     +--------------+
 //! ```
-//!
-//! # Library Structure
-//! - `config`: Handles styling configuration and TOML parsing
-//! - `markdown`: Implements the Markdown lexer and token parsing
-//! - `pdf`: Manages PDF document generation
-//! - `styling`: Defines styling types and defaults
 
 pub mod assets;
 pub mod config;
@@ -132,12 +103,13 @@ use pdf::Pdf;
 use std::error::Error;
 use std::fmt;
 
-/// Custom error type for markdown-to-pdf conversion errors
+/// Represents errors that can occur during the markdown-to-pdf conversion process.
+/// This includes both parsing failures and PDF generation issues.
 #[derive(Debug)]
 pub enum MdpError {
-    /// Error during Markdown parsing
+    /// Indicates an error occurred while parsing the Markdown content
     ParseError(String),
-    /// Error during PDF generation
+    /// Indicates an error occurred during PDF file generation
     PdfError(String),
 }
 
@@ -151,20 +123,20 @@ impl fmt::Display for MdpError {
     }
 }
 
-/// Converts Markdown content to a styled PDF document.
+/// Transforms Markdown content into a styled PDF document. The function orchestrates the entire
+/// conversion pipeline, from parsing the input text through generating the final PDF file.
 ///
-/// This function handles the complete conversion process:
-/// 1. Parses the Markdown content into tokens
-/// 2. Loads styling configuration from `markdown2pdfrc.toml` if available
-/// 3. Generates a PDF document with the configured styling
+/// The process begins by parsing the Markdown content into a structured token representation.
+/// It then applies styling rules, either from a configuration file if present or using defaults.
+/// Finally, it generates the PDF document with the appropriate styling and structure.
 ///
 /// # Arguments
-/// * `markdown` - The Markdown content as a string
-/// * `path` - Output path for the generated PDF file
+/// * `markdown` - The Markdown content to convert
+/// * `path` - Where to save the generated PDF file
 ///
 /// # Returns
-/// * `Ok(())` if conversion succeeds
-/// * `Err(MdpError)` if parsing or PDF generation fails
+/// * `Ok(())` on successful conversion
+/// * `Err(MdpError)` if errors occur during parsing or PDF generation
 ///
 /// # Example
 /// ```rust

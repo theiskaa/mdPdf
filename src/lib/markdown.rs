@@ -1,95 +1,94 @@
+//! Markdown lexical analysis and token representation.
+//!
+//! This module provides the core lexical analysis functionality for parsing Markdown text into a
+//! structured token stream. It handles both block-level elements like headings and lists, as well
+//! as inline formatting like emphasis and links.
+//!
+//! The lexer maintains proper nesting of elements and handles edge cases around delimiter matching
+//! and whitespace handling according to CommonMark spec.
+//!
+//! # Examples
+//! ```rust
+//! use markdown2pdf::Token;
+//!
+//! // Heading token with nested content
+//! let heading = Token::Heading(vec![Token::Text("Title".to_string())], 1);
+//!
+//! // Emphasis token with nested content
+//! let emphasis = Token::Emphasis {
+//!     level: 1,
+//!     content: vec![Token::Text("italic".to_string())]
+//! };
+//!
+//! // Link token with text and URL
+//! let link = Token::Link("Click here".to_string(), "https://example.com".to_string());
+//! ```
+//!
+//! Token (nested) structure looks like:
+//! Token::Heading
+//! └── Vec<Token>
+//!     ├── Token::Text
+//!     ├── Token::Emphasis
+//!     │   └── Vec<Token>
+//!     │       └── Token::Text
+//!     └── Token::Link
+//!         ├── text: String
+//!         └── url: String
+
 /// Represents the different types of tokens that can be parsed from Markdown text.
-///
-/// # Examples
-/// ```rust
-/// use markdown2pdf::Token;
-///
-/// // Heading token with nested content
-/// let heading = Token::Heading(vec![Token::Text("Title".to_string())], 1);
-///
-/// // Emphasis token with nested content
-/// let emphasis = Token::Emphasis {
-///     level: 1,
-///     content: vec![Token::Text("italic".to_string())]
-/// };
-///
-/// // Link token with text and URL
-/// let link = Token::Link("Click here".to_string(), "https://example.com".to_string());
-/// ```
-///
-/// # Token Processing Pipeline
-/// ```text
-/// Input Text           Token Type                          PDF Element
-/// -----------          -------------------------           -------------
-/// # Heading     -->    Token::Heading(vec[], 1)     -->    <h1> styled text
-/// *emphasis*    -->    Token::Emphasis{1, vec[]}    -->    <em> styled text
-/// [link](url)   -->    Token::Link(text, url)       -->    <a> styled link
-/// ```
-///
-/// # Nested Token Structure
-/// ```text
-/// Token::Heading
-///   └── Vec<Token>
-///       ├── Token::Text
-///       ├── Token::Emphasis
-///       │   └── Vec<Token>
-///       │       └── Token::Text
-///       └── Token::Link
-///           ├── text: String
-///           └── url: String
-/// ```
+/// Each variant captures both the semantic meaning and associated content/metadata
+/// needed to properly render the element.
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     /// A heading with nested content and level (e.g., # h1, ## h2)
     Heading(Vec<Token>, usize), // (content, level)
     /// Emphasized text with configurable level (1-3) for * or _ delimiters
-    Emphasis {
-        level: usize,
-        content: Vec<Token>,
-    },
+    Emphasis { level: usize, content: Vec<Token> },
+    /// Strong emphasis (bold) text using ** or __ delimiters
     StrongEmphasis(Vec<Token>),
-    /// Code block with language specification and content
+    /// Code block with optional language specification and content
     Code(String, String),
+    /// Block quote containing quoted text
     BlockQuote(String),
+    /// List item with nested content
     ListItem(Vec<Token>),
-    Link(String, String),  // (text, url)
+    /// Link with display text and URL
+    Link(String, String), // (text, url)
+    /// Image with alt text and URL
     Image(String, String), // (alt text, url)
+    /// Plain text content
     Text(String),
+    /// HTML comment content
     HtmlComment(String),
+    /// Line break
     Newline,
+    /// Horizontal rule (---)
     HorizontalRule,
+    /// Unknown or malformed token
     Unknown(String),
 }
 
+/// Error types that can occur during lexical analysis
 #[derive(Debug)]
 pub enum LexerError {
+    /// Input ended unexpectedly while parsing a token
     UnexpectedEndOfInput,
+    /// Encountered an invalid or malformed token
     UnknownToken(String),
 }
 
 /// A lexical analyzer that converts Markdown text into a sequence of tokens.
-/// Handles nested structures and special Markdown syntax elements.
-///
-/// # Examples
-/// ```rust
-/// use markdown2pdf::markdown::Lexer;
-///
-/// let mut lexer = Lexer::new("# Hello\n*world*".to_string());
-/// let tokens = lexer.parse().unwrap();
-///
-/// // Parse specific elements
-/// let mut lexer = Lexer::new("**bold text**".to_string());
-/// let emphasis = lexer.parse_emphasis().unwrap();
-///
-/// let mut lexer = Lexer::new("[link](url)".to_string());
-/// let link = lexer.parse_link().unwrap();
-/// ```
+/// Handles nested structures and special Markdown syntax elements while maintaining
+/// proper context and state during parsing.
 pub struct Lexer {
+    /// Input text as character vector for efficient parsing
     input: Vec<char>,
+    /// Current position in the input stream
     position: usize,
 }
 
 impl Lexer {
+    /// Creates a new lexer instance from input string
     pub fn new(input: String) -> Self {
         Lexer {
             input: input.chars().collect(),
@@ -98,6 +97,7 @@ impl Lexer {
     }
 
     /// Parses the entire input string into a sequence of tokens.
+    /// Returns a Result containing either a Vec of parsed tokens or a LexerError.
     pub fn parse(&mut self) -> Result<Vec<Token>, LexerError> {
         let mut tokens = Vec::new();
 
@@ -153,6 +153,7 @@ impl Lexer {
         Ok(Some(token))
     }
 
+    /// Parses a heading token, counting '#' characters for level and collecting nested content
     fn parse_heading(&mut self) -> Result<Token, LexerError> {
         let mut level = 0;
         while self.current_char() == '#' {
@@ -163,6 +164,7 @@ impl Lexer {
         let content = self.parse_nested_content(|c| c == '\n')?;
         Ok(Token::Heading(content, level))
     }
+
     /// Parses emphasis tokens (* or _) with support for multiple levels (1-3).
     /// Ensures proper matching of opening and closing delimiters.
     fn parse_emphasis(&mut self) -> Result<Token, LexerError> {
@@ -195,6 +197,7 @@ impl Lexer {
         })
     }
 
+    /// Parses code blocks, handling both inline code and fenced code blocks
     fn parse_code(&mut self) -> Result<Token, LexerError> {
         let start_backticks = self.count_backticks();
 
@@ -244,7 +247,7 @@ impl Lexer {
         ))
     }
 
-    // Helper method to count consecutive backticks
+    /// Helper method to count consecutive backticks
     fn count_backticks(&mut self) -> usize {
         let mut count = 0;
         while self.position < self.input.len() && self.current_char() == '`' {
@@ -254,6 +257,7 @@ impl Lexer {
         count
     }
 
+    /// Parses a blockquote, collecting text until newline
     fn parse_blockquote(&mut self) -> Result<Token, LexerError> {
         self.advance();
         self.skip_whitespace();
@@ -277,6 +281,7 @@ impl Lexer {
         Ok(Token::ListItem(content))
     }
 
+    /// Parses a link token, extracting display text and URL
     fn parse_link(&mut self) -> Result<Token, LexerError> {
         self.advance(); // skip '['
         let text = self.read_until_char(']');
@@ -290,6 +295,7 @@ impl Lexer {
         Ok(Token::Link(text, String::new()))
     }
 
+    /// Parses an image token, extracting alt text and URL
     fn parse_image(&mut self) -> Result<Token, LexerError> {
         self.advance();
         if self.current_char() == '[' {
@@ -309,6 +315,7 @@ impl Lexer {
         }
     }
 
+    /// Parses a newline token
     fn parse_newline(&mut self) -> Result<Token, LexerError> {
         self.advance();
         Ok(Token::Newline)
@@ -341,6 +348,7 @@ impl Lexer {
         }
     }
 
+    /// Parses an HTML comment, extracting the comment content
     fn parse_html_comment(&mut self) -> Result<Token, LexerError> {
         self.position += 4; // Skip past '<', '!', '-', '-'
         let start = self.position;
@@ -364,10 +372,12 @@ impl Lexer {
         }
     }
 
+    /// Checks if current position is at the start of a line
     fn is_at_line_start(&self) -> bool {
         self.position == 0 || self.input.get(self.position - 1) == Some(&'\n')
     }
 
+    /// Skips whitespace characters except newlines
     fn skip_whitespace(&mut self) {
         while self.position < self.input.len()
             && self.current_char().is_whitespace()
@@ -377,18 +387,22 @@ impl Lexer {
         }
     }
 
+    /// Advances the position counter by one
     fn advance(&mut self) {
         self.position += 1;
     }
 
+    /// Returns the current character or '\0' if at end of input
     fn current_char(&self) -> char {
         *self.input.get(self.position).unwrap_or(&'\0')
     }
 
+    /// Returns the next character or '\0' if at end of input
     fn peek_char(&self) -> char {
         *self.input.get(self.position + 1).unwrap_or(&'\0')
     }
 
+    /// Reads characters until a newline is encountered
     fn read_until_newline(&mut self) -> String {
         let start = self.position;
         while self.position < self.input.len() && self.current_char() != '\n' {
@@ -397,6 +411,7 @@ impl Lexer {
         self.input[start..self.position].iter().collect()
     }
 
+    /// Reads characters until a specific delimiter is encountered
     fn read_until_char(&mut self, delimiter: char) -> String {
         let start = self.position;
         while self.position < self.input.len() && self.current_char() != delimiter {
@@ -405,6 +420,7 @@ impl Lexer {
         self.input[start..self.position].iter().collect()
     }
 
+    /// Checks if current position starts an HTML comment
     fn is_html_comment_start(&self) -> bool {
         self.input[self.position..]
             .iter()
@@ -412,6 +428,7 @@ impl Lexer {
             .starts_with("<!--")
     }
 
+    /// Checks if current character could start a special token
     fn is_start_of_special_token(&self) -> bool {
         let ch = self.current_char();
         match ch {
