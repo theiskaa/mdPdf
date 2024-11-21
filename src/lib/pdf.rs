@@ -485,7 +485,7 @@ impl Pdf {
                     if let Some(color) = style_match.link.text_color {
                         link_style = link_style.with_color(Color::Rgb(color.0, color.1, color.2));
                     }
-                    paragraph.push_link(format!("{} ", text), url, link_style);
+                    paragraph.push_link(text, url, link_style);
                 }
                 Token::Code(_language, content) => {
                     let mut code_style = style.clone();

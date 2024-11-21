@@ -128,7 +128,10 @@ impl Lexer {
     /// Determines the next token in the input stream based on the current character
     /// and context. Handles special cases like line starts differently.
     fn next_token(&mut self) -> Result<Option<Token>, LexerError> {
-        self.skip_whitespace();
+        // Only skip whitespace if we're not immediately after a special token
+        if !self.is_after_special_token() {
+            self.skip_whitespace();
+        }
 
         if self.position >= self.input.len() {
             return Ok(None);
@@ -327,6 +330,12 @@ impl Lexer {
         let mut content = String::new();
         let start_pos = self.position;
 
+        // If we're starting with a space after a special token, include it
+        if self.position > 0 && self.current_char() == ' ' {
+            content.push(' ');
+            self.advance();
+        }
+
         while self.position < self.input.len() {
             let ch = self.current_char();
 
@@ -434,6 +443,19 @@ impl Lexer {
         match ch {
             '#' | '*' | '_' | '`' | '[' | '!' => true,
             '<' => self.is_html_comment_start(),
+            _ => false,
+        }
+    }
+
+    /// Checks if we're immediately after a special token that should preserve following spaces
+    fn is_after_special_token(&self) -> bool {
+        if self.position == 0 {
+            return false;
+        }
+
+        let prev_char = self.input[self.position - 1];
+        match prev_char {
+            '`' | ')' => true,
             _ => false,
         }
     }
