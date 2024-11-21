@@ -1,63 +1,20 @@
 //! PDF generation module for markdown-to-pdf conversion.
 //!
-//! This module handles converting markdown tokens into a PDF document,
-//! applying styling and formatting according to the provided configuration.
+//! This module handles the complete process of converting parsed markdown content into professionally formatted PDF documents.
+//! It provides robust support for generating PDFs with proper typography, layout, and styling while maintaining the semantic
+//! structure of the original markdown.
 //!
-//! # Examples
+//! The PDF generation process preserves the hierarchical document structure through careful handling of block-level and inline
+//! elements. Block elements like headings, paragraphs, lists and code blocks are rendered with appropriate spacing and indentation.
+//! Inline formatting such as emphasis, links and inline code maintain proper nesting and style inheritance.
 //!
-//! Basic PDF generation:
-//! ```rust
-//! use markdown2pdf::pdf::Pdf;
-//! use markdown2pdf::styling::StyleMatch;
-//! use markdown2pdf::Token;
+//! The styling system offers extensive customization options through a flexible configuration model. This includes control over:
+//! fonts, text sizes, colors, margins, spacing, and special styling for different content types. The module automatically handles
+//! font loading, page layout, and proper rendering of all markdown elements while respecting the configured styles.
 //!
-//! // Create tokens from markdown
-//! let tokens = vec![Token::Text("Hello world".to_string())];
-//!
-//! // Generate PDF with default styling
-//! let pdf = Pdf::new(tokens);
-//! let doc = pdf.create_document(StyleMatch::default());
-//! Pdf::render(doc, "output.pdf");
-//! ```
-//!
-//! Custom styling:
-//! ```rust
-//! use markdown2pdf::pdf::Pdf;
-//! use markdown2pdf::styling::{StyleMatch, BasicTextStyle};
-//!
-//! let mut styles = StyleMatch::default();
-//! styles.heading_1.size = 24; // Large headings
-//! styles.text.text_color = Some((0, 0, 255)); // Blue text
-//!
-//! let pdf = Pdf::new(tokens);
-//! let doc = pdf.create_document(styles);
-//! ```
-//!
-//! # Processing Pipeline
-//! ```text
-//! +----------------+     +------------------+     +-----------------+
-//! | Markdown       |     | Block-Level      |     | PDF Document    |
-//! | Tokens         | --> | Elements         | --> | Generation      |
-//! | (Token enum)   |     | (Block enum)     |     | (genpdfi)       |
-//! +----------------+     +------------------+     +-----------------+
-//!        |                      |                        |
-//!        |                      |                        |
-//!        v                      v                        v
-//! Text, Headings,     Paragraphs, Lists,       Styled elements with
-//! Lists, etc.         Block Quotes, etc.       fonts and formatting
-//! ```
-//!
-//! Styling Application:
-//! ```text
-//! +--------------+     +---------------+     +-----------------+
-//! | Style Match  | --> | Element       | --> | Rendered PDF    |
-//! | Config       |     | Styling       |     | Element         |
-//! +--------------+     +---------------+     +-----------------+
-//!       |                     |                      |
-//!       v                     v                      v
-//! Font sizes,        Style properties      Final formatted
-//! colors, etc.       applied to blocks     document elements
-//! ```
+//! Error handling is built in throughout the generation process to provide meaningful feedback if issues occur during PDF creation.
+//! The module is designed to be both robust for production use and flexible enough to accommodate various document structures
+//! and styling needs.
 
 use crate::styling::{MdPdfFont, StyleMatch};
 use crate::Token;
@@ -66,35 +23,46 @@ use genpdfi::fonts::{FontData, FontFamily};
 use genpdfi::style::{Color, Style};
 use genpdfi::Margins;
 
-/// Represents a block-level element in the document structure.
+/// A block-level element representing a distinct section of content in the document structure.
+/// Block elements form the fundamental building blocks of the document layout, each handling
+/// a specific type of content with its own semantic meaning and visual presentation rules.
 #[derive(Debug)]
 #[allow(dead_code)]
 enum Block {
-    Heading(Vec<Token>, usize), // (content, level [1-6])
+    /// A document heading with associated content and heading level
+    Heading(Vec<Token>, usize),
+    /// A standard text paragraph
     Paragraph(Vec<Token>),
+    /// An unordered list of content items
     List(Vec<Vec<Token>>),
+    /// An indented block quote section
     BlockQuote(Vec<Token>),
-    CodeBlock(String, String), // (language, content)
+    /// A formatted block of code content
+    CodeBlock(String, String),
+    /// A horizontal dividing line
     HorizontalRule,
+    /// A vertical spacing element
     EmptyLine,
 }
 
-/// Main PDF document generator.
+/// The main PDF document generator that orchestrates the conversion process from markdown to PDF.
+/// This struct serves as the central coordinator for document generation, managing the overall
+/// structure, styling application, and proper sequencing of content elements.
 pub struct Pdf {
     input: Vec<Token>,
 }
 
 impl Pdf {
-    /// Creates a new PDF generator with the given markdown tokens.
+    /// Creates a new PDF generator instance prepared to process the provided markdown tokens.
+    /// The generator will maintain the document structure while applying appropriate styling
+    /// and layout rules during conversion.
     pub fn new(input: Vec<Token>) -> Self {
         Self { input }
     }
 
-    /// Renders the document to a PDF file at the specified path.
-    ///
-    /// # Returns
-    /// * `None` if the file is saved successfully
-    /// * `Some(String)` if an error occurs
+    /// Finalizes and outputs the processed document to a PDF file at the specified path.
+    /// Provides comprehensive error handling to catch and report any issues during the
+    /// final rendering phase.
     pub fn render(document: genpdfi::Document, path: &str) -> Option<String> {
         match document.render_to_file(path) {
             Ok(_) => None,
@@ -102,15 +70,39 @@ impl Pdf {
         }
     }
 
-    /// Creates a PDF document from the markdown tokens using the provided styling.
+    /// Orchestrates the complete document creation process by coordinating font loading,
+    /// document initialization, content processing, and styled rendering of all elements.
     pub fn create_document(self, style_match: StyleMatch) -> genpdfi::Document {
+        // Initialize document and fonts
         let font_family = MdPdfFont::load_font_family(style_match.text.font_family)
             .expect("Failed to load font family");
         let code_font_family = MdPdfFont::load_font_family(style_match.code.font_family)
             .expect("Failed to load code font family");
 
+        let mut doc = self.init_document(&font_family, &style_match);
+
+        // Process tokens into blocks and render them
+        let blocks = self.group_tokens(self.input.clone());
+        self.render_blocks(
+            &mut doc,
+            blocks,
+            &font_family,
+            &code_font_family,
+            &style_match,
+        );
+
+        doc
+    }
+
+    /// Establishes the foundational document configuration including page dimensions,
+    /// margins, and base typographic settings that will be used throughout the document.
+    fn init_document(
+        &self,
+        font_family: &FontFamily<FontData>,
+        style_match: &StyleMatch,
+    ) -> genpdfi::Document {
         let mut doc = genpdfi::Document::new(font_family.clone());
-        // Set document decorator and margins
+
         let mut decorator = genpdfi::SimplePageDecorator::new();
         decorator.set_margins(Margins::trbl(
             style_match.margins.top,
@@ -118,116 +110,53 @@ impl Pdf {
             style_match.margins.bottom,
             style_match.margins.left,
         ));
+
         doc.set_page_decorator(decorator);
         doc.set_font_size(style_match.text.size);
+        doc
+    }
 
-        // Process tokens into blocks
-        let blocks = self.group_tokens(self.input.clone());
-
+    /// Manages the rendering of all block-level elements while maintaining proper
+    /// document flow and applying the appropriate styling to each element type.
+    fn render_blocks(
+        &self,
+        doc: &mut genpdfi::Document,
+        blocks: Vec<Block>,
+        font_family: &FontFamily<FontData>,
+        code_font_family: &FontFamily<FontData>,
+        style_match: &StyleMatch,
+    ) {
         for block in blocks {
             match block {
                 Block::Heading(content, level) => {
-                    let heading_style = match level {
-                        1 => &style_match.heading_1,
-                        2 => &style_match.heading_2,
-                        3 => &style_match.heading_3,
-                        _ => &style_match.text,
-                    };
-                    let mut style = Style::new().with_font_size(heading_style.size);
-                    if heading_style.bold {
-                        style = style.bold();
-                    }
-                    if heading_style.italic {
-                        style = style.italic();
-                    }
-                    if let Some(color) = heading_style.text_color {
-                        style = style.with_color(Color::Rgb(color.0, color.1, color.2));
-                    }
-                    let paragraph = self.process_inline_tokens(
+                    self.render_heading(
+                        doc,
                         content,
-                        style,
-                        &font_family,
-                        &code_font_family,
-                        &style_match,
+                        level,
+                        font_family,
+                        code_font_family,
+                        style_match,
                     );
-                    doc.push(paragraph);
-                    doc.push(genpdfi::elements::Break::new(heading_style.after_spacing));
                 }
                 Block::Paragraph(content) => {
-                    let mut style = Style::new().with_font_size(style_match.text.size);
-                    if let Some(color) = style_match.text.text_color {
-                        style = style.with_color(Color::Rgb(color.0, color.1, color.2));
-                    }
-                    let paragraph = self.process_inline_tokens(
-                        content,
-                        style,
-                        &font_family,
-                        &code_font_family,
-                        &style_match,
-                    );
-                    doc.push(paragraph);
-                    doc.push(genpdfi::elements::Break::new(
-                        style_match.text.after_spacing,
-                    ));
+                    self.render_paragraph(doc, content, font_family, code_font_family, style_match);
                 }
                 Block::List(items) => {
-                    let mut list = UnorderedList::new();
-                    for item_tokens in items {
-                        let mut style = Style::new().with_font_size(style_match.list_item.size);
-                        if let Some(color) = style_match.list_item.text_color {
-                            style = style.with_color(Color::Rgb(color.0, color.1, color.2));
-                        }
-                        let item_paragraph = self.process_inline_tokens(
-                            item_tokens,
-                            style,
-                            &font_family,
-                            &code_font_family,
-                            &style_match,
-                        );
-                        list.push(item_paragraph);
-                    }
-                    doc.push(list);
-                    doc.push(genpdfi::elements::Break::new(
-                        style_match.list_item.after_spacing,
-                    ));
+                    self.render_list(doc, items, font_family, code_font_family, style_match);
                 }
                 Block::BlockQuote(content) => {
-                    let mut style = Style::new().with_font_size(style_match.block_quote.size);
-                    if style_match.block_quote.italic {
-                        style = style.italic();
-                    }
-                    if let Some(color) = style_match.block_quote.text_color {
-                        style = style.with_color(Color::Rgb(color.0, color.1, color.2));
-                    }
-                    let paragraph = self.process_inline_tokens(
+                    self.render_blockquote(
+                        doc,
                         content,
-                        style,
-                        &font_family,
-                        &code_font_family,
-                        &style_match,
+                        font_family,
+                        code_font_family,
+                        style_match,
                     );
-                    doc.push(paragraph);
-                    doc.push(genpdfi::elements::Break::new(
-                        style_match.block_quote.after_spacing,
-                    ));
                 }
                 Block::CodeBlock(_, content) => {
-                    let mut code_style = Style::new().with_font_size(style_match.code.size);
-                    if let Some(color) = style_match.code.text_color {
-                        code_style = code_style.with_color(Color::Rgb(color.0, color.1, color.2));
-                    }
-
-                    for line in content.split('\n') {
-                        let mut para = Paragraph::default();
-                        para.push_styled(line.to_string(), code_style.clone());
-                        doc.push(para);
-                    }
-                    doc.push(genpdfi::elements::Break::new(
-                        style_match.code.after_spacing,
-                    ));
+                    self.render_codeblock(doc, content, style_match);
                 }
                 Block::HorizontalRule => {
-                    // TODO: implement horizontal rule element.
                     doc.push(genpdfi::elements::Break::new(
                         style_match.horizontal_rule.after_spacing,
                     ));
@@ -237,18 +166,148 @@ impl Pdf {
                 }
             }
         }
-
-        doc
     }
 
-    /// Groups tokens into logical block-level elements.
-    ///
-    /// This function processes the flat list of tokens into a hierarchical structure
-    /// of blocks (paragraphs, headings, lists, etc). It handles:
-    /// - Consecutive inline tokens as paragraphs
-    /// - Multiple newlines as paragraph breaks
-    /// - List items grouping into lists
-    /// - Block-level elements like headings and blockquotes
+    /// Handles the specialized rendering of headings with appropriate level-based styling,
+    /// spacing, and visual hierarchy within the document structure.
+    fn render_heading(
+        &self,
+        doc: &mut genpdfi::Document,
+        content: Vec<Token>,
+        level: usize,
+        font_family: &FontFamily<FontData>,
+        code_font_family: &FontFamily<FontData>,
+        style_match: &StyleMatch,
+    ) {
+        let heading_style = match level {
+            1 => &style_match.heading_1,
+            2 => &style_match.heading_2,
+            3 => &style_match.heading_3,
+            _ => &style_match.text,
+        };
+
+        let mut style = Style::new().with_font_size(heading_style.size);
+        if heading_style.bold {
+            style = style.bold();
+        }
+        if heading_style.italic {
+            style = style.italic();
+        }
+        if let Some(color) = heading_style.text_color {
+            style = style.with_color(Color::Rgb(color.0, color.1, color.2));
+        }
+
+        let paragraph =
+            self.process_inline_tokens(content, style, font_family, code_font_family, style_match);
+        doc.push(paragraph);
+        doc.push(genpdfi::elements::Break::new(heading_style.after_spacing));
+    }
+
+    /// Manages the rendering of standard paragraphs while handling inline formatting
+    /// and maintaining proper text flow and spacing.
+    fn render_paragraph(
+        &self,
+        doc: &mut genpdfi::Document,
+        content: Vec<Token>,
+        font_family: &FontFamily<FontData>,
+        code_font_family: &FontFamily<FontData>,
+        style_match: &StyleMatch,
+    ) {
+        let mut style = Style::new().with_font_size(style_match.text.size);
+        if let Some(color) = style_match.text.text_color {
+            style = style.with_color(Color::Rgb(color.0, color.1, color.2));
+        }
+
+        let paragraph =
+            self.process_inline_tokens(content, style, font_family, code_font_family, style_match);
+        doc.push(paragraph);
+        doc.push(genpdfi::elements::Break::new(
+            style_match.text.after_spacing,
+        ));
+    }
+
+    /// Handles the specialized rendering of unordered lists including proper indentation,
+    /// bullet points, and spacing between list items.
+    fn render_list(
+        &self,
+        doc: &mut genpdfi::Document,
+        items: Vec<Vec<Token>>,
+        font_family: &FontFamily<FontData>,
+        code_font_family: &FontFamily<FontData>,
+        style_match: &StyleMatch,
+    ) {
+        let mut list = UnorderedList::new();
+        for item_tokens in items {
+            let mut style = Style::new().with_font_size(style_match.list_item.size);
+            if let Some(color) = style_match.list_item.text_color {
+                style = style.with_color(Color::Rgb(color.0, color.1, color.2));
+            }
+            let item_paragraph = self.process_inline_tokens(
+                item_tokens,
+                style,
+                font_family,
+                code_font_family,
+                style_match,
+            );
+            list.push(item_paragraph);
+        }
+        doc.push(list);
+        doc.push(genpdfi::elements::Break::new(
+            style_match.list_item.after_spacing,
+        ));
+    }
+
+    /// Manages the rendering of block quotes with appropriate indentation, styling,
+    /// and visual distinction from regular text content.
+    fn render_blockquote(
+        &self,
+        doc: &mut genpdfi::Document,
+        content: Vec<Token>,
+        font_family: &FontFamily<FontData>,
+        code_font_family: &FontFamily<FontData>,
+        style_match: &StyleMatch,
+    ) {
+        let mut style = Style::new().with_font_size(style_match.block_quote.size);
+        if style_match.block_quote.italic {
+            style = style.italic();
+        }
+        if let Some(color) = style_match.block_quote.text_color {
+            style = style.with_color(Color::Rgb(color.0, color.1, color.2));
+        }
+
+        let paragraph =
+            self.process_inline_tokens(content, style, font_family, code_font_family, style_match);
+        doc.push(paragraph);
+        doc.push(genpdfi::elements::Break::new(
+            style_match.block_quote.after_spacing,
+        ));
+    }
+
+    /// Handles the specialized rendering of code blocks with monospace fonts,
+    /// proper formatting, and optional syntax highlighting.
+    fn render_codeblock(
+        &self,
+        doc: &mut genpdfi::Document,
+        content: String,
+        style_match: &StyleMatch,
+    ) {
+        let mut code_style = Style::new().with_font_size(style_match.code.size);
+        if let Some(color) = style_match.code.text_color {
+            code_style = code_style.with_color(Color::Rgb(color.0, color.1, color.2));
+        }
+
+        for line in content.split('\n') {
+            let mut para = Paragraph::default();
+            para.push_styled(line.to_string(), code_style.clone());
+            doc.push(para);
+        }
+        doc.push(genpdfi::elements::Break::new(
+            style_match.code.after_spacing,
+        ));
+    }
+
+    /// Analyzes and organizes markdown tokens into logical block-level elements
+    /// while maintaining proper document structure and content relationships.
     fn group_tokens(&self, tokens: Vec<Token>) -> Vec<Block> {
         let mut blocks = Vec::new();
         let mut idx = 0;
@@ -295,7 +354,6 @@ impl Pdf {
                         blocks.push(Block::Paragraph(current_inline_content.clone()));
                         current_inline_content.clear();
                     }
-                    // Process the blockquote content as inline tokens
                     let content_tokens = vec![Token::Text(content.clone())];
                     blocks.push(Block::BlockQuote(content_tokens));
                     idx += 1;
@@ -331,7 +389,6 @@ impl Pdf {
                         blocks.push(Block::EmptyLine);
                         newline_count = 0;
                     } else {
-                        // Single newline within inline content
                         current_inline_content.push(Token::Newline);
                     }
                 }
@@ -351,7 +408,6 @@ impl Pdf {
             }
         }
 
-        // Flush any remaining inline content as a paragraph
         if !current_inline_content.is_empty() {
             blocks.push(Block::Paragraph(current_inline_content));
         }
@@ -359,7 +415,8 @@ impl Pdf {
         blocks
     }
 
-    /// Processes a sequence of inline tokens into a paragraph with appropriate styling.
+    /// Processes inline tokens to create properly styled paragraph elements while
+    /// maintaining formatting and proper nesting of inline elements.
     fn process_inline_tokens(
         &self,
         tokens: Vec<Token>,
@@ -380,14 +437,8 @@ impl Pdf {
         paragraph
     }
 
-    /// Renders inline tokens within a paragraph, applying appropriate styling.
-    ///
-    /// This function handles:
-    /// - Basic text with the current style
-    /// - Emphasis with italic/bold styling
-    /// - Links with custom colors
-    /// - Code blocks with monospace font
-    /// - Nested inline elements
+    /// Handles the detailed rendering of inline formatting elements while maintaining
+    /// proper style inheritance and nesting of text decorations.
     fn render_inline_tokens(
         &self,
         paragraph: &mut Paragraph,
@@ -405,15 +456,9 @@ impl Pdf {
                 Token::Emphasis { level, content } => {
                     let mut nested_style = style.clone();
                     match level {
-                        1 => {
-                            nested_style = nested_style.italic();
-                        }
-                        2 => {
-                            nested_style = nested_style.bold();
-                        }
-                        3 | _ => {
-                            nested_style = nested_style.bold().italic();
-                        }
+                        1 => nested_style = nested_style.italic(),
+                        2 => nested_style = nested_style.bold(),
+                        _ => nested_style = nested_style.bold().italic(),
                     }
                     self.render_inline_tokens(
                         paragraph,
@@ -440,8 +485,6 @@ impl Pdf {
                     if let Some(color) = style_match.link.text_color {
                         link_style = link_style.with_color(Color::Rgb(color.0, color.1, color.2));
                     }
-                    // TODO: Adding a space after link text to fix spacing between consecutive links.
-                    // This workaround should be moved to the lexer level for a proper fix.
                     paragraph.push_link(format!("{} ", text), url, link_style);
                 }
                 Token::Code(_language, content) => {
@@ -451,7 +494,7 @@ impl Pdf {
                     }
                     paragraph.push_styled(content, code_style);
                 }
-                Token::Newline => {} // DO NOTHING
+                Token::Newline => {}
                 _ => {}
             }
         }
