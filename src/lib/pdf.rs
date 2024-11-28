@@ -16,14 +16,13 @@
 //! The module is designed to be both robust for production use and flexible enough to accommodate various document structures
 //! and styling needs.
 
-use genpdfi::{
-    fonts::{FontData, FontFamily},
-    Document,
-};
-
 use crate::{
     styling::{MdPdfFont, StyleMatch},
     Token,
+};
+use genpdfi::{
+    fonts::{FontData, FontFamily},
+    Document,
 };
 
 /// The main PDF document generator that orchestrates the conversion process from markdown to PDF.
@@ -199,6 +198,7 @@ impl Pdf {
     /// and text color based on the heading level configuration. After rendering the heading,
     /// it adds the configured spacing.
     fn render_heading(&self, doc: &mut Document, content: &[Token], level: usize) {
+        doc.push(genpdfi::elements::Break::new(0.8)); // TODO: make this configurable before_spacing
         let heading_style = match level {
             1 => &self.style.heading_1,
             2 => &self.style.heading_2,
@@ -290,15 +290,17 @@ impl Pdf {
     /// paragraph with the configured code style. It applies the code font size and
     /// text color settings, and adds the configured spacing after the block.
     fn render_code_block(&self, doc: &mut Document, _lang: &str, content: &str) {
+        doc.push(genpdfi::elements::Break::new(0.4)); // TODO: make this configurable `before_spacing`
         let mut style = genpdfi::style::Style::new().with_font_size(self.style.code.size);
 
         if let Some(color) = self.style.code.text_color {
             style = style.with_color(genpdfi::style::Color::Rgb(color.0, color.1, color.2));
         }
 
+        let indent = "    "; // TODO: make this configurable from style match.
         for line in content.split('\n') {
             let mut para = genpdfi::elements::Paragraph::default();
-            para.push_styled(line.to_string(), style.clone());
+            para.push_styled(format!("{}{}", indent, line), style.clone());
             doc.push(para);
         }
         doc.push(genpdfi::elements::Break::new(self.style.code.after_spacing));

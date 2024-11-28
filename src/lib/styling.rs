@@ -295,7 +295,7 @@ impl StyleMatch {
             code: BasicTextStyle::new(
                 8,
                 Some((128, 128, 128)),
-                None,
+                Some(0.4),
                 None,
                 Some("Roboto"),
                 false,
