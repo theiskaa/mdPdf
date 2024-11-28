@@ -146,7 +146,7 @@ impl Pdf {
                 } => {
                     self.flush_paragraph(doc, &current_tokens);
                     current_tokens.clear();
-                    self.render_list_item(doc, content, *ordered, *number);
+                    self.render_list_item(doc, content, *ordered, *number, 0);
                 }
                 Token::Code(lang, content) if content.contains('\n') => {
                     self.flush_paragraph(doc, &current_tokens);
@@ -308,34 +308,63 @@ impl Pdf {
 
     /// Renders a list item with appropriate styling and formatting.
     ///
-    /// This method handles both ordered and unordered list items. For ordered lists,
-    /// it includes the item number, while unordered lists use a bullet point.
-    /// The content is rendered with the configured list item style settings and
-    /// appropriate spacing is added after each item.
+    /// This method handles both ordered and unordered list items, with support for nested lists.
+    /// For ordered lists, it includes the item number prefixed with a period (like "1."), while
+    /// unordered lists use a bullet point dash character. The content is rendered with the
+    /// configured list item style settings from the document style configuration.
+    ///
+    /// The method processes both the direct content of the list item as well as any nested list
+    /// items recursively. Each nested level increases the indentation by 4 spaces to create a
+    /// visual hierarchy. The method filters the content to separate inline elements from nested
+    /// list items, rendering the inline content first before processing any nested items.
+    ///
+    /// After rendering each list item's content, appropriate spacing is added based on the
+    /// configured after_spacing value. The method maintains consistent styling throughout the
+    /// list hierarchy while allowing for proper nesting and indentation of complex list structures.
     fn render_list_item(
         &self,
         doc: &mut Document,
         content: &[Token],
         ordered: bool,
         number: Option<usize>,
+        nesting_level: usize,
     ) {
-        // TODO: handle nested lists
         let mut para = genpdfi::elements::Paragraph::default();
         let style = genpdfi::style::Style::new().with_font_size(self.style.list_item.size);
 
-        // TODO: make the the list prefix configurable from style match.
+        let indent = "    ".repeat(nesting_level);
         if !ordered {
-            para.push_styled(" - ", style.clone());
-        } else {
-            if let Some(n) = number {
-                para.push_styled(format!(" {}. ", n), style.clone());
-            }
+            para.push_styled(format!("{}- ", indent), style.clone());
+        } else if let Some(n) = number {
+            para.push_styled(format!("{}{}. ", indent, n), style.clone());
         }
 
-        self.render_inline_content_with_style(&mut para, content, style);
+        let inline_content: Vec<Token> = content
+            .iter()
+            .filter(|token| !matches!(token, Token::ListItem { .. }))
+            .cloned()
+            .collect();
+        self.render_inline_content_with_style(&mut para, &inline_content, style);
         doc.push(para);
         doc.push(genpdfi::elements::Break::new(
             self.style.list_item.after_spacing,
         ));
+
+        for token in content {
+            if let Token::ListItem {
+                content: nested_content,
+                ordered: nested_ordered,
+                number: nested_number,
+            } = token
+            {
+                self.render_list_item(
+                    doc,
+                    nested_content,
+                    *nested_ordered,
+                    *nested_number,
+                    nesting_level + 1,
+                );
+            }
+        }
     }
 }
