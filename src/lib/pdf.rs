@@ -16,48 +16,60 @@
 //! The module is designed to be both robust for production use and flexible enough to accommodate various document structures
 //! and styling needs.
 
-use crate::styling::{MdPdfFont, StyleMatch};
-use crate::Token;
-use genpdfi::elements::{Paragraph, UnorderedList};
-use genpdfi::fonts::{FontData, FontFamily};
-use genpdfi::style::{Color, Style};
-use genpdfi::Margins;
-
-/// A block-level element representing a distinct section of content in the document structure.
-/// Block elements form the fundamental building blocks of the document layout, each handling
-/// a specific type of content with its own semantic meaning and visual presentation rules.
-#[derive(Debug)]
-#[allow(dead_code)]
-enum Block {
-    /// A document heading with associated content and heading level
-    Heading(Vec<Token>, usize),
-    /// A standard text paragraph
-    Paragraph(Vec<Token>),
-    /// An unordered list of content items
-    List(Vec<Vec<Token>>),
-    /// An indented block quote section
-    BlockQuote(Vec<Token>),
-    /// A formatted block of code content
-    CodeBlock(String, String),
-    /// A horizontal dividing line
-    HorizontalRule,
-    /// A vertical spacing element
-    EmptyLine,
-}
+use crate::{
+    styling::{MdPdfFont, StyleMatch},
+    Token,
+};
+use genpdfi::{
+    fonts::{FontData, FontFamily},
+    Document,
+};
 
 /// The main PDF document generator that orchestrates the conversion process from markdown to PDF.
 /// This struct serves as the central coordinator for document generation, managing the overall
 /// structure, styling application, and proper sequencing of content elements.
+/// It stores the input markdown tokens that will be processed into PDF content, along with style
+/// configuration that controls the visual appearance and layout of the generated document.
+/// The generator maintains two separate font families - a main text font used for regular document
+/// content and a specialized monospace font specifically for code sections.
+/// These fonts are loaded based on the style configuration and stored internally for use during
+/// the PDF generation process.
+#[allow(dead_code)]
 pub struct Pdf {
     input: Vec<Token>,
+    style: StyleMatch,
+    font_family: FontFamily<FontData>,
+    code_font_family: FontFamily<FontData>,
 }
 
 impl Pdf {
-    /// Creates a new PDF generator instance prepared to process the provided markdown tokens.
-    /// The generator will maintain the document structure while applying appropriate styling
-    /// and layout rules during conversion.
-    pub fn new(input: Vec<Token>) -> Self {
-        Self { input }
+    /// Creates a new PDF generator instance to process markdown tokens.
+    /// The generator maintains document structure and applies styling/layout rules during conversion.
+    ///
+    /// It automatically loads two font families based on the style configuration:
+    /// - A main text font for regular content
+    /// - A code font specifically for code blocks and inline code segments
+    ///
+    /// Font loading is handled automatically but will panic if the specified fonts cannot be loaded
+    /// successfully. The generator internally stores the input tokens, style configuration, and loaded
+    /// font families for use during PDF generation.
+    ///
+    /// Through the style configuration, the generator controls all visual aspects of the output PDF
+    /// including typography, dimensions, colors and spacing between elements. The style settings
+    /// determine the complete visual appearance and layout characteristics of the final generated
+    /// PDF document.
+    pub fn new(input: Vec<Token>, style: StyleMatch) -> Self {
+        let font_family = MdPdfFont::load_font_family(style.text.font_family)
+            .expect("Failed to load font family");
+        let code_font_family = MdPdfFont::load_font_family(style.code.font_family)
+            .expect("Failed to load code font family");
+
+        Self {
+            input,
+            style,
+            font_family,
+            code_font_family,
+        }
     }
 
     /// Finalizes and outputs the processed document to a PDF file at the specified path.
@@ -70,123 +82,132 @@ impl Pdf {
         }
     }
 
-    /// Orchestrates the complete document creation process by coordinating font loading,
-    /// document initialization, content processing, and styled rendering of all elements.
-    pub fn create_document(self, style_match: StyleMatch) -> genpdfi::Document {
-        // Initialize document and fonts
-        let font_family = MdPdfFont::load_font_family(style_match.text.font_family)
-            .expect("Failed to load font family");
-        let code_font_family = MdPdfFont::load_font_family(style_match.code.font_family)
-            .expect("Failed to load code font family");
-
-        let mut doc = self.init_document(&font_family, &style_match);
-
-        // Process tokens into blocks and render them
-        let blocks = self.group_tokens(self.input.clone());
-        self.render_blocks(
-            &mut doc,
-            blocks,
-            &font_family,
-            &code_font_family,
-            &style_match,
-        );
-
-        doc
-    }
-
-    /// Establishes the foundational document configuration including page dimensions,
-    /// margins, and base typographic settings that will be used throughout the document.
-    fn init_document(
-        &self,
-        font_family: &FontFamily<FontData>,
-        style_match: &StyleMatch,
-    ) -> genpdfi::Document {
-        let mut doc = genpdfi::Document::new(font_family.clone());
-
+    /// Initializes and returns a new PDF document with configured styling and layout.
+    ///
+    /// Creates a new document instance with the main font family and configures the page decorator
+    /// with margins from the style settings. The document's base font size is set according to the
+    /// text style configuration.
+    ///
+    /// The function processes all input tokens and renders them into the document structure before
+    /// returning the complete document ready for final output. The document contains all content
+    /// with proper styling, formatting and layout applied according to the style configuration.
+    ///
+    /// Through the style configuration, this method controls the overall document appearance including:
+    /// - Page margins and layout
+    /// - Base font size
+    /// - Content processing and rendering
+    pub fn render_into_document(&self) -> Document {
+        let mut doc = genpdfi::Document::new(self.font_family.clone());
         let mut decorator = genpdfi::SimplePageDecorator::new();
-        decorator.set_margins(Margins::trbl(
-            style_match.margins.top,
-            style_match.margins.right,
-            style_match.margins.bottom,
-            style_match.margins.left,
+
+        decorator.set_margins(genpdfi::Margins::trbl(
+            self.style.margins.top,
+            self.style.margins.right,
+            self.style.margins.bottom,
+            self.style.margins.left,
         ));
 
         doc.set_page_decorator(decorator);
-        doc.set_font_size(style_match.text.size);
+        doc.set_font_size(self.style.text.size);
+
+        self.process_tokens(&mut doc);
         doc
     }
 
-    /// Manages the rendering of all block-level elements while maintaining proper
-    /// document flow and applying the appropriate styling to each element type.
-    fn render_blocks(
-        &self,
-        doc: &mut genpdfi::Document,
-        blocks: Vec<Block>,
-        font_family: &FontFamily<FontData>,
-        code_font_family: &FontFamily<FontData>,
-        style_match: &StyleMatch,
-    ) {
-        for block in blocks {
-            match block {
-                Block::Heading(content, level) => {
-                    self.render_heading(
-                        doc,
-                        content,
-                        level,
-                        font_family,
-                        code_font_family,
-                        style_match,
-                    );
+    /// Processes and renders tokens directly into the document structure.
+    ///
+    /// This method iterates through all input tokens and renders them into the document,
+    /// handling each token type appropriately according to its semantic meaning. Block-level
+    /// elements like headings, list items, and code blocks trigger the flushing of any
+    /// accumulated inline tokens into paragraphs before being rendered themselves.
+    ///
+    /// The method maintains a buffer of current tokens that gets flushed into paragraphs
+    /// when block-level elements are encountered or when explicit paragraph breaks are
+    /// needed. This ensures proper document flow and maintains correct spacing between
+    /// different content elements while preserving the intended document structure.
+    ///
+    /// Through careful token processing and rendering, this method builds up the complete
+    /// document content with appropriate styling, formatting and layout applied according
+    /// to the configured style settings.
+    fn process_tokens(&self, doc: &mut Document) {
+        let mut current_tokens = Vec::new();
+
+        for token in &self.input {
+            match token {
+                Token::Heading(content, level) => {
+                    self.flush_paragraph(doc, &current_tokens);
+                    current_tokens.clear();
+                    self.render_heading(doc, content, *level);
                 }
-                Block::Paragraph(content) => {
-                    self.render_paragraph(doc, content, font_family, code_font_family, style_match);
+                Token::ListItem {
+                    content,
+                    ordered,
+                    number,
+                } => {
+                    self.flush_paragraph(doc, &current_tokens);
+                    current_tokens.clear();
+                    self.render_list_item(doc, content, *ordered, *number, 0);
                 }
-                Block::List(items) => {
-                    self.render_list(doc, items, font_family, code_font_family, style_match);
+                Token::Code(lang, content) if content.contains('\n') => {
+                    self.flush_paragraph(doc, &current_tokens);
+                    current_tokens.clear();
+                    self.render_code_block(doc, lang, content);
                 }
-                Block::BlockQuote(content) => {
-                    self.render_blockquote(
-                        doc,
-                        content,
-                        font_family,
-                        code_font_family,
-                        style_match,
-                    );
-                }
-                Block::CodeBlock(_, content) => {
-                    self.render_codeblock(doc, content, style_match);
-                }
-                Block::HorizontalRule => {
+                Token::HorizontalRule => {
+                    self.flush_paragraph(doc, &current_tokens);
+                    current_tokens.clear();
                     doc.push(genpdfi::elements::Break::new(
-                        style_match.horizontal_rule.after_spacing,
+                        self.style.horizontal_rule.after_spacing,
                     ));
                 }
-                Block::EmptyLine => {
-                    doc.push(genpdfi::elements::Break::new(1.0));
+                Token::Newline => {
+                    self.flush_paragraph(doc, &current_tokens);
+                    current_tokens.clear();
+                }
+                _ => {
+                    current_tokens.push(token.clone());
                 }
             }
         }
+
+        // Flush any remaining tokens
+        self.flush_paragraph(doc, &current_tokens);
     }
 
-    /// Handles the specialized rendering of headings with appropriate level-based styling,
-    /// spacing, and visual hierarchy within the document structure.
-    fn render_heading(
-        &self,
-        doc: &mut genpdfi::Document,
-        content: Vec<Token>,
-        level: usize,
-        font_family: &FontFamily<FontData>,
-        code_font_family: &FontFamily<FontData>,
-        style_match: &StyleMatch,
-    ) {
+    /// Renders accumulated tokens as a paragraph in the document.
+    ///
+    /// This method takes a document and a slice of tokens, and renders them as a paragraph
+    /// with appropriate styling. If the tokens slice is empty, no paragraph is rendered.
+    /// After rendering the paragraph content, it adds spacing after the paragraph according
+    /// to the configured text style.
+    fn flush_paragraph(&self, doc: &mut Document, tokens: &[Token]) {
+        if tokens.is_empty() {
+            return;
+        }
+
+        let mut para = genpdfi::elements::Paragraph::default();
+        self.render_inline_content(&mut para, tokens);
+        doc.push(para);
+        doc.push(genpdfi::elements::Break::new(self.style.text.after_spacing));
+    }
+
+    /// Renders a heading with the appropriate level styling.
+    ///
+    /// This method takes a document, heading content tokens, and a level number to render
+    /// a heading with the corresponding style settings. It applies font size, bold/italic effects,
+    /// and text color based on the heading level configuration. After rendering the heading,
+    /// it adds the configured spacing.
+    fn render_heading(&self, doc: &mut Document, content: &[Token], level: usize) {
+        doc.push(genpdfi::elements::Break::new(0.8)); // TODO: make this configurable before_spacing
         let heading_style = match level {
-            1 => &style_match.heading_1,
-            2 => &style_match.heading_2,
-            3 => &style_match.heading_3,
-            _ => &style_match.text,
+            1 => &self.style.heading_1,
+            2 => &self.style.heading_2,
+            3 | _ => &self.style.heading_3,
         };
 
-        let mut style = Style::new().with_font_size(heading_style.size);
+        let mut para = genpdfi::elements::Paragraph::default();
+        let mut style = genpdfi::style::Style::new().with_font_size(heading_style.size);
+
         if heading_style.bold {
             style = style.bold();
         }
@@ -194,264 +215,30 @@ impl Pdf {
             style = style.italic();
         }
         if let Some(color) = heading_style.text_color {
-            style = style.with_color(Color::Rgb(color.0, color.1, color.2));
+            style = style.with_color(genpdfi::style::Color::Rgb(color.0, color.1, color.2));
         }
 
-        let paragraph =
-            self.process_inline_tokens(content, style, font_family, code_font_family, style_match);
-        doc.push(paragraph);
+        self.render_inline_content_with_style(&mut para, content, style);
+        doc.push(para);
         doc.push(genpdfi::elements::Break::new(heading_style.after_spacing));
     }
 
-    /// Manages the rendering of standard paragraphs while handling inline formatting
-    /// and maintaining proper text flow and spacing.
-    fn render_paragraph(
+    /// Renders inline content with a specified style.
+    ///
+    /// This method processes a sequence of inline tokens and renders them with the given style.
+    /// It handles various inline elements like plain text, emphasis, strong emphasis, links, and
+    /// inline code, applying appropriate styling modifications for each type while maintaining
+    /// the base style properties.
+    fn render_inline_content_with_style(
         &self,
-        doc: &mut genpdfi::Document,
-        content: Vec<Token>,
-        font_family: &FontFamily<FontData>,
-        code_font_family: &FontFamily<FontData>,
-        style_match: &StyleMatch,
-    ) {
-        let mut style = Style::new().with_font_size(style_match.text.size);
-        if let Some(color) = style_match.text.text_color {
-            style = style.with_color(Color::Rgb(color.0, color.1, color.2));
-        }
-
-        let paragraph =
-            self.process_inline_tokens(content, style, font_family, code_font_family, style_match);
-        doc.push(paragraph);
-        doc.push(genpdfi::elements::Break::new(
-            style_match.text.after_spacing,
-        ));
-    }
-
-    /// Handles the specialized rendering of unordered lists including proper indentation,
-    /// bullet points, and spacing between list items.
-    fn render_list(
-        &self,
-        doc: &mut genpdfi::Document,
-        items: Vec<Vec<Token>>,
-        font_family: &FontFamily<FontData>,
-        code_font_family: &FontFamily<FontData>,
-        style_match: &StyleMatch,
-    ) {
-        let mut list = UnorderedList::new();
-        for item_tokens in items {
-            let mut style = Style::new().with_font_size(style_match.list_item.size);
-            if let Some(color) = style_match.list_item.text_color {
-                style = style.with_color(Color::Rgb(color.0, color.1, color.2));
-            }
-            let item_paragraph = self.process_inline_tokens(
-                item_tokens,
-                style,
-                font_family,
-                code_font_family,
-                style_match,
-            );
-            list.push(item_paragraph);
-        }
-        doc.push(list);
-        doc.push(genpdfi::elements::Break::new(
-            style_match.list_item.after_spacing,
-        ));
-    }
-
-    /// Manages the rendering of block quotes with appropriate indentation, styling,
-    /// and visual distinction from regular text content.
-    fn render_blockquote(
-        &self,
-        doc: &mut genpdfi::Document,
-        content: Vec<Token>,
-        font_family: &FontFamily<FontData>,
-        code_font_family: &FontFamily<FontData>,
-        style_match: &StyleMatch,
-    ) {
-        let mut style = Style::new().with_font_size(style_match.block_quote.size);
-        if style_match.block_quote.italic {
-            style = style.italic();
-        }
-        if let Some(color) = style_match.block_quote.text_color {
-            style = style.with_color(Color::Rgb(color.0, color.1, color.2));
-        }
-
-        let paragraph =
-            self.process_inline_tokens(content, style, font_family, code_font_family, style_match);
-        doc.push(paragraph);
-        doc.push(genpdfi::elements::Break::new(
-            style_match.block_quote.after_spacing,
-        ));
-    }
-
-    /// Handles the specialized rendering of code blocks with monospace fonts,
-    /// proper formatting, and optional syntax highlighting.
-    fn render_codeblock(
-        &self,
-        doc: &mut genpdfi::Document,
-        content: String,
-        style_match: &StyleMatch,
-    ) {
-        let mut code_style = Style::new().with_font_size(style_match.code.size);
-        if let Some(color) = style_match.code.text_color {
-            code_style = code_style.with_color(Color::Rgb(color.0, color.1, color.2));
-        }
-
-        for line in content.split('\n') {
-            let mut para = Paragraph::default();
-            para.push_styled(line.to_string(), code_style.clone());
-            doc.push(para);
-        }
-        doc.push(genpdfi::elements::Break::new(
-            style_match.code.after_spacing,
-        ));
-    }
-
-    /// Analyzes and organizes markdown tokens into logical block-level elements
-    /// while maintaining proper document structure and content relationships.
-    fn group_tokens(&self, tokens: Vec<Token>) -> Vec<Block> {
-        let mut blocks = Vec::new();
-        let mut idx = 0;
-        let len = tokens.len();
-        let mut current_inline_content = Vec::new();
-        let mut newline_count = 0;
-
-        while idx < len {
-            match &tokens[idx] {
-                Token::Heading(content, level) => {
-                    if !current_inline_content.is_empty() {
-                        blocks.push(Block::Paragraph(current_inline_content.clone()));
-                        current_inline_content.clear();
-                    }
-                    blocks.push(Block::Heading(content.clone(), *level));
-                    idx += 1;
-                    newline_count = 0;
-                }
-                Token::ListItem(content) => {
-                    if !current_inline_content.is_empty() {
-                        blocks.push(Block::Paragraph(current_inline_content.clone()));
-                        current_inline_content.clear();
-                    }
-                    // Start a new list
-                    let mut items = Vec::new();
-                    items.push(content.clone());
-                    idx += 1;
-
-                    // Collect subsequent list items
-                    while idx < len {
-                        if let Token::ListItem(content) = &tokens[idx] {
-                            items.push(content.clone());
-                            idx += 1;
-                        } else {
-                            break;
-                        }
-                    }
-
-                    blocks.push(Block::List(items));
-                    newline_count = 0;
-                }
-                Token::BlockQuote(content) => {
-                    if !current_inline_content.is_empty() {
-                        blocks.push(Block::Paragraph(current_inline_content.clone()));
-                        current_inline_content.clear();
-                    }
-                    let content_tokens = vec![Token::Text(content.clone())];
-                    blocks.push(Block::BlockQuote(content_tokens));
-                    idx += 1;
-                    newline_count = 0;
-                }
-                Token::Code(lang, content) if content.contains('\n') => {
-                    if !current_inline_content.is_empty() {
-                        blocks.push(Block::Paragraph(current_inline_content.clone()));
-                        current_inline_content.clear();
-                    }
-                    blocks.push(Block::CodeBlock(lang.clone(), content.clone()));
-                    idx += 1;
-                    newline_count = 0;
-                }
-                Token::HorizontalRule => {
-                    if !current_inline_content.is_empty() {
-                        blocks.push(Block::Paragraph(current_inline_content.clone()));
-                        current_inline_content.clear();
-                    }
-                    blocks.push(Block::HorizontalRule);
-                    idx += 1;
-                    newline_count = 0;
-                }
-                Token::Newline => {
-                    idx += 1;
-                    newline_count += 1;
-
-                    if newline_count >= 2 {
-                        if !current_inline_content.is_empty() {
-                            blocks.push(Block::Paragraph(current_inline_content.clone()));
-                            current_inline_content.clear();
-                        }
-                        blocks.push(Block::EmptyLine);
-                        newline_count = 0;
-                    } else {
-                        current_inline_content.push(Token::Newline);
-                    }
-                }
-                Token::Text(_)
-                | Token::Emphasis { .. }
-                | Token::StrongEmphasis(_)
-                | Token::Code(_, _)
-                | Token::Link(_, _) => {
-                    current_inline_content.push(tokens[idx].clone());
-                    idx += 1;
-                    newline_count = 0;
-                }
-                _ => {
-                    idx += 1;
-                    newline_count = 0;
-                }
-            }
-        }
-
-        if !current_inline_content.is_empty() {
-            blocks.push(Block::Paragraph(current_inline_content));
-        }
-
-        blocks
-    }
-
-    /// Processes inline tokens to create properly styled paragraph elements while
-    /// maintaining formatting and proper nesting of inline elements.
-    fn process_inline_tokens(
-        &self,
-        tokens: Vec<Token>,
-        style: Style,
-        font_family: &FontFamily<FontData>,
-        code_font_family: &FontFamily<FontData>,
-        style_match: &StyleMatch,
-    ) -> Paragraph {
-        let mut paragraph = Paragraph::default();
-        self.render_inline_tokens(
-            &mut paragraph,
-            tokens,
-            style,
-            font_family,
-            code_font_family,
-            style_match,
-        );
-        paragraph
-    }
-
-    /// Handles the detailed rendering of inline formatting elements while maintaining
-    /// proper style inheritance and nesting of text decorations.
-    fn render_inline_tokens(
-        &self,
-        paragraph: &mut Paragraph,
-        tokens: Vec<Token>,
-        style: Style,
-        font_family: &FontFamily<FontData>,
-        code_font_family: &FontFamily<FontData>,
-        style_match: &StyleMatch,
+        para: &mut genpdfi::elements::Paragraph,
+        tokens: &[Token],
+        style: genpdfi::style::Style,
     ) {
         for token in tokens {
             match token {
                 Token::Text(content) => {
-                    paragraph.push_styled(content, style.clone());
+                    para.push_styled(content.clone(), style.clone());
                 }
                 Token::Emphasis { level, content } => {
                     let mut nested_style = style.clone();
@@ -460,42 +247,123 @@ impl Pdf {
                         2 => nested_style = nested_style.bold(),
                         _ => nested_style = nested_style.bold().italic(),
                     }
-                    self.render_inline_tokens(
-                        paragraph,
-                        content,
-                        nested_style,
-                        font_family,
-                        code_font_family,
-                        style_match,
-                    );
+                    self.render_inline_content_with_style(para, content, nested_style);
                 }
                 Token::StrongEmphasis(content) => {
                     let nested_style = style.clone().bold();
-                    self.render_inline_tokens(
-                        paragraph,
-                        content,
-                        nested_style,
-                        font_family,
-                        code_font_family,
-                        style_match,
-                    );
+                    self.render_inline_content_with_style(para, content, nested_style);
                 }
                 Token::Link(text, url) => {
                     let mut link_style = style.clone();
-                    if let Some(color) = style_match.link.text_color {
-                        link_style = link_style.with_color(Color::Rgb(color.0, color.1, color.2));
+                    if let Some(color) = self.style.link.text_color {
+                        link_style = link_style
+                            .with_color(genpdfi::style::Color::Rgb(color.0, color.1, color.2));
                     }
-                    paragraph.push_link(text, url, link_style);
+                    para.push_link(text.clone(), url.clone(), link_style);
                 }
-                Token::Code(_language, content) => {
+                Token::Code(_, content) => {
                     let mut code_style = style.clone();
-                    if let Some(color) = style_match.code.text_color {
-                        code_style = code_style.with_color(Color::Rgb(color.0, color.1, color.2));
+                    if let Some(color) = self.style.code.text_color {
+                        code_style = code_style
+                            .with_color(genpdfi::style::Color::Rgb(color.0, color.1, color.2));
                     }
-                    paragraph.push_styled(content, code_style);
+                    para.push_styled(content.clone(), code_style);
                 }
-                Token::Newline => {}
                 _ => {}
+            }
+        }
+    }
+
+    /// Renders inline content with the default text style.
+    ///
+    /// This is a convenience method that wraps render_inline_content_with_style,
+    /// using the default text style configuration. It applies the configured font size
+    /// to the content before rendering.
+    fn render_inline_content(&self, para: &mut genpdfi::elements::Paragraph, tokens: &[Token]) {
+        let style = genpdfi::style::Style::new().with_font_size(self.style.text.size);
+        self.render_inline_content_with_style(para, tokens, style);
+    }
+
+    /// Renders a code block with appropriate styling.
+    ///
+    /// This method handles multi-line code blocks, rendering each line as a separate
+    /// paragraph with the configured code style. It applies the code font size and
+    /// text color settings, and adds the configured spacing after the block.
+    fn render_code_block(&self, doc: &mut Document, _lang: &str, content: &str) {
+        doc.push(genpdfi::elements::Break::new(0.4)); // TODO: make this configurable `before_spacing`
+        let mut style = genpdfi::style::Style::new().with_font_size(self.style.code.size);
+
+        if let Some(color) = self.style.code.text_color {
+            style = style.with_color(genpdfi::style::Color::Rgb(color.0, color.1, color.2));
+        }
+
+        let indent = "    "; // TODO: make this configurable from style match.
+        for line in content.split('\n') {
+            let mut para = genpdfi::elements::Paragraph::default();
+            para.push_styled(format!("{}{}", indent, line), style.clone());
+            doc.push(para);
+        }
+        doc.push(genpdfi::elements::Break::new(self.style.code.after_spacing));
+    }
+
+    /// Renders a list item with appropriate styling and formatting.
+    ///
+    /// This method handles both ordered and unordered list items, with support for nested lists.
+    /// For ordered lists, it includes the item number prefixed with a period (like "1."), while
+    /// unordered lists use a bullet point dash character. The content is rendered with the
+    /// configured list item style settings from the document style configuration.
+    ///
+    /// The method processes both the direct content of the list item as well as any nested list
+    /// items recursively. Each nested level increases the indentation by 4 spaces to create a
+    /// visual hierarchy. The method filters the content to separate inline elements from nested
+    /// list items, rendering the inline content first before processing any nested items.
+    ///
+    /// After rendering each list item's content, appropriate spacing is added based on the
+    /// configured after_spacing value. The method maintains consistent styling throughout the
+    /// list hierarchy while allowing for proper nesting and indentation of complex list structures.
+    fn render_list_item(
+        &self,
+        doc: &mut Document,
+        content: &[Token],
+        ordered: bool,
+        number: Option<usize>,
+        nesting_level: usize,
+    ) {
+        let mut para = genpdfi::elements::Paragraph::default();
+        let style = genpdfi::style::Style::new().with_font_size(self.style.list_item.size);
+
+        let indent = "    ".repeat(nesting_level);
+        if !ordered {
+            para.push_styled(format!("{}- ", indent), style.clone());
+        } else if let Some(n) = number {
+            para.push_styled(format!("{}{}. ", indent, n), style.clone());
+        }
+
+        let inline_content: Vec<Token> = content
+            .iter()
+            .filter(|token| !matches!(token, Token::ListItem { .. }))
+            .cloned()
+            .collect();
+        self.render_inline_content_with_style(&mut para, &inline_content, style);
+        doc.push(para);
+        doc.push(genpdfi::elements::Break::new(
+            self.style.list_item.after_spacing,
+        ));
+
+        for token in content {
+            if let Token::ListItem {
+                content: nested_content,
+                ordered: nested_ordered,
+                number: nested_number,
+            } = token
+            {
+                self.render_list_item(
+                    doc,
+                    nested_content,
+                    *nested_ordered,
+                    *nested_number,
+                    nesting_level + 1,
+                );
             }
         }
     }

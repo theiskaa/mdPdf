@@ -41,7 +41,7 @@
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     /// A heading with nested content and level (e.g., # h1, ## h2)
-    Heading(Vec<Token>, usize), // (content, level)
+    Heading(Vec<Token>, usize),
     /// Emphasized text with configurable level (1-3) for * or _ delimiters
     Emphasis { level: usize, content: Vec<Token> },
     /// Strong emphasis (bold) text using ** or __ delimiters
@@ -50,12 +50,16 @@ pub enum Token {
     Code(String, String),
     /// Block quote containing quoted text
     BlockQuote(String),
-    /// List item with nested content
-    ListItem(Vec<Token>),
+    /// List item with nested content and type information
+    ListItem {
+        content: Vec<Token>,
+        ordered: bool,
+        number: Option<usize>, // For ordered lists (e.g., "1.", "2.")
+    },
     /// Link with display text and URL
-    Link(String, String), // (text, url)
+    Link(String, String),
     /// Image with alt text and URL
-    Image(String, String), // (alt text, url)
+    Image(String, String),
     /// Plain text content
     Text(String),
     /// HTML comment content
@@ -103,6 +107,7 @@ impl Lexer {
 
         while self.position < self.input.len() {
             if let Some(token) = self.next_token()? {
+                println!("{:?}", token);
                 tokens.push(token);
             }
         }
@@ -117,11 +122,47 @@ impl Lexer {
         F: Fn(char) -> bool,
     {
         let mut content = Vec::new();
-        while self.position < self.input.len() && !is_delimiter(self.current_char()) {
+        let initial_indent = self.get_current_indent();
+
+        while self.position < self.input.len() {
+            let ch = self.current_char();
+
+            if is_delimiter(ch) {
+                break;
+            }
+
+            // Handle nested content
+            if self.is_at_line_start() {
+                let current_indent = self.get_current_indent();
+
+                // If more indented than parent, treat as nested content
+                if current_indent > initial_indent {
+                    self.position += current_indent;
+
+                    match self.current_char() {
+                        '-' | '+' => {
+                            if !self.check_horizontal_rule()? {
+                                content.push(self.parse_list_item(false, current_indent)?);
+                                continue;
+                            }
+                        }
+                        '0'..='9' => {
+                            if self.check_ordered_list_marker().is_some() {
+                                content.push(self.parse_list_item(true, current_indent)?);
+                                continue;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
+            // Parse regular content
             if let Some(token) = self.next_token()? {
                 content.push(token);
             }
         }
+
         Ok(content)
     }
 
@@ -145,7 +186,20 @@ impl Lexer {
             '*' | '_' => self.parse_emphasis()?,
             '`' => self.parse_code()?,
             '>' if is_line_start => self.parse_blockquote()?,
-            '-' | '+' if is_line_start => self.parse_list_item_or_horizontal_rule()?,
+            '-' | '+' if is_line_start => {
+                if self.check_horizontal_rule()? {
+                    Token::HorizontalRule
+                } else {
+                    self.parse_list_item(false, 0)?
+                }
+            }
+            '0'..='9' if is_line_start => {
+                if let Some(_) = self.check_ordered_list_marker() {
+                    self.parse_list_item(true, 0)?
+                } else {
+                    self.parse_text()?
+                }
+            }
             '[' => self.parse_link()?,
             '!' => self.parse_image()?,
             '<' if self.is_html_comment_start() => self.parse_html_comment()?,
@@ -181,7 +235,8 @@ impl Lexer {
             self.advance();
         }
 
-        let content = self.parse_nested_content(|c| c == delimiter)?;
+        let mut content = self.parse_nested_content(|c| c == delimiter)?;
+        content.push(Token::Text(String::from(" ")));
 
         // Ensure proper closing
         for _ in 0..level {
@@ -196,7 +251,7 @@ impl Lexer {
 
         Ok(Token::Emphasis {
             level: level.min(3), // Cap the level at 3
-            content,
+            content: content,
         })
     }
 
@@ -266,22 +321,6 @@ impl Lexer {
         self.skip_whitespace();
         let content = self.read_until_newline();
         Ok(Token::BlockQuote(content))
-    }
-
-    /// Handles both list items and horizontal rules since they can start with the same character.
-    /// Checks for three consecutive hyphens to identify a horizontal rule.
-    fn parse_list_item_or_horizontal_rule(&mut self) -> Result<Token, LexerError> {
-        self.advance();
-        self.skip_whitespace();
-
-        if self.current_char() == '-' && self.peek_char() == '-' {
-            self.advance();
-            self.advance();
-            return Ok(Token::HorizontalRule);
-        }
-
-        let content = self.parse_nested_content(|c| c == '\n')?;
-        Ok(Token::ListItem(content))
     }
 
     /// Parses a link token, extracting display text and URL
@@ -406,11 +445,6 @@ impl Lexer {
         *self.input.get(self.position).unwrap_or(&'\0')
     }
 
-    /// Returns the next character or '\0' if at end of input
-    fn peek_char(&self) -> char {
-        *self.input.get(self.position + 1).unwrap_or(&'\0')
-    }
-
     /// Reads characters until a newline is encountered
     fn read_until_newline(&mut self) -> String {
         let start = self.position;
@@ -458,5 +492,121 @@ impl Lexer {
             '`' | ')' => true,
             _ => false,
         }
+    }
+
+    /// Checks if the current position contains a horizontal rule (---)
+    fn check_horizontal_rule(&mut self) -> Result<bool, LexerError> {
+        if self.current_char() == '-' {
+            let mut count = 1;
+            let mut pos = self.position + 1;
+
+            // Look ahead for at least 3 consecutive hyphens
+            while pos < self.input.len() && self.input[pos] == '-' {
+                count += 1;
+                pos += 1;
+            }
+
+            if count >= 3 {
+                self.position = pos;
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    }
+
+    /// Checks if current position starts an ordered list marker (e.g., "1.")
+    fn check_ordered_list_marker(&mut self) -> Option<usize> {
+        let start_pos = self.position;
+        let mut pos = start_pos;
+        let mut number_str = String::new();
+
+        while pos < self.input.len() && self.input[pos].is_ascii_digit() {
+            number_str.push(self.input[pos]);
+            pos += 1;
+        }
+
+        if pos < self.input.len() && self.input[pos] == '.' {
+            if let Ok(number) = number_str.parse::<usize>() {
+                return Some(number);
+            }
+        }
+
+        None
+    }
+
+    /// Parses a list item, handling both ordered and unordered types
+    fn parse_list_item(&mut self, ordered: bool, indent_level: usize) -> Result<Token, LexerError> {
+        let mut number = None;
+
+        if !ordered {
+            self.advance();
+        } else {
+            number = self.check_ordered_list_marker();
+            // Skip past number and period
+            while self.position < self.input.len()
+                && (self.current_char().is_ascii_digit() || self.current_char() == '.')
+            {
+                self.advance();
+            }
+        }
+
+        self.skip_whitespace();
+
+        let mut content = Vec::new();
+        while self.position < self.input.len() && self.current_char() != '\n' {
+            if let Some(token) = self.next_token()? {
+                content.push(token);
+            }
+        }
+
+        // Move to next line if exists
+        if self.position < self.input.len() && self.current_char() == '\n' {
+            self.advance();
+        }
+
+        while self.position < self.input.len() {
+            let current_indent = self.get_current_indent();
+            if current_indent <= indent_level {
+                // Back to same or lower indentation level, exit nested parsing
+                break;
+            }
+
+            self.position += current_indent;
+            match self.current_char() {
+                '-' | '+' => {
+                    if !self.check_horizontal_rule()? {
+                        content.push(self.parse_list_item(false, current_indent)?);
+                    }
+                }
+                '0'..='9' => {
+                    if self.check_ordered_list_marker().is_some() {
+                        content.push(self.parse_list_item(true, current_indent)?);
+                    }
+                }
+                _ => break,
+            }
+        }
+
+        Ok(Token::ListItem {
+            content,
+            ordered,
+            number,
+        })
+    }
+
+    /// Gets the current line's indentation level
+    fn get_current_indent(&self) -> usize {
+        let mut count = 0;
+        let mut pos = self.position;
+
+        while pos < self.input.len() {
+            match self.input[pos] {
+                ' ' => count += 1,
+                '\t' => count += 4, // Convert tabs to spaces (common convention)
+                _ => break,
+            }
+            pos += 1;
+        }
+        count
     }
 }

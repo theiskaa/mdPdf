@@ -153,9 +153,9 @@ pub fn parse(markdown: String, path: &str) -> Result<(), MdpError> {
         .parse()
         .map_err(|e| MdpError::ParseError(format!("Failed to parse markdown: {:?}", e)))?;
 
-    let pdf = Pdf::new(tokens);
     let style = config::load_config();
-    let document = pdf.create_document(style);
+    let pdf = Pdf::new(tokens, style);
+    let document = pdf.render_into_document();
 
     if let Some(err) = Pdf::render(document, path) {
         return Err(MdpError::PdfError(err));
