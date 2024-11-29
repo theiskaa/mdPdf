@@ -107,6 +107,7 @@ impl Lexer {
 
         while self.position < self.input.len() {
             if let Some(token) = self.next_token()? {
+                println!("{:?}", token);
                 tokens.push(token);
             }
         }
@@ -234,7 +235,8 @@ impl Lexer {
             self.advance();
         }
 
-        let content = self.parse_nested_content(|c| c == delimiter)?;
+        let mut content = self.parse_nested_content(|c| c == delimiter)?;
+        content.push(Token::Text(String::from(" ")));
 
         // Ensure proper closing
         for _ in 0..level {
@@ -249,7 +251,7 @@ impl Lexer {
 
         Ok(Token::Emphasis {
             level: level.min(3), // Cap the level at 3
-            content,
+            content: content,
         })
     }
 
