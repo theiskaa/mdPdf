@@ -6,6 +6,35 @@ the changelog generator (git-cliff).
 
 ---
 
+## [0.1.1] - 2024-11-29
+
+### Features
+- *(pdf)* Implement hierarchical list rendering with proper indentation
+- *(markdown)* Support mixed ordered/unordered nested lists
+- *(lib)* Load embedded fonts from assets
+- *(lib)* Include assets in lib
+- *(lib)* Add asset embedding
+
+### Bug Fixes
+- *(markdown)* Ensure proper spacing after emphasized text
+- *(pdf)* Set correct before and after settings
+- *(markdown)* Handling space between tokens
+
+### Refactor
+- *(pdf)* Restructure PDF generation implementation
+- *(pdf)* Improve the structure of pdf implementation
+
+### Documentation
+- *(readme)* Update the readme to have more technical info
+- *(lib)* Improve code documentation
+
+### Miscellaneous Tasks
+- *(changelog)* Add "New Contributors" header to cliff
+- *(cargo)* Add Cargo.lock
+
+## New Contributors
+* @orhun made their first contribution
+
 ## [0.1.0] - 2024-11-17
 
 ### Features
@@ -60,6 +89,9 @@ the changelog generator (git-cliff).
 - *(styling)* Add cross platform font path generation
 - *(pdf)* Missing space after hyper links
 - *(markdown)* Link item parsing
+
+### Documentation
+- *(changelog)* Add changelog generator
 
 ### Miscellaneous Tasks
 - *(base)* Rename project to mdp
