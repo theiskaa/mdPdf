@@ -11,6 +11,7 @@ Source: https://github.com/theiskaa/markdown2pdf
 Options:
   -p, --path        Specify the path to the Markdown file to convert.
   -s, --string      Provide Markdown content directly as a string.
+  -u, --url         Specify a URL to fetch Markdown content from.
   -o, --output      Specify the output file path for the generated PDF.
 
 Examples:
@@ -20,9 +21,9 @@ Examples:
   markdown2pdf -s "**bold text** *italic text*." -o "output.pdf"
      Convert the provided Markdown string to 'output.pdf'.
 
-  markdown2pdf -p "file.md"
-     Convert 'file.md' to a PDF, saving it as 'output.pdf'.
+  markdown2pdf -u "https://raw.githubusercontent.com/user/repo/main/README.md" -o "readme.pdf"
+     Convert the Markdown content from the URL to 'readme.pdf'.
 
 Notes:
-- If both `-p` and `-s` options are provided, the `--path` option will take precedence.
+- If multiple input options (-p, -s, -u) are provided, only one will be used in this order: path > url > string
 - If no output file is specified with `-o`, the default output file will be 'output.pdf'.

@@ -10,6 +10,9 @@ the changelog generator (git-cliff).
 
 """
 
+[changelog.remote]
+remote_url = "https://github.com/theiskaa/markdown2pdf"
+
 body = """
 {% if version %}\
     {% if previous.version %}\
@@ -42,6 +45,7 @@ body = """
 {%- endfor -%}
 {%- endif %}\n\n
 """
+
 # template for the changelog footer
 footer = ""
 
@@ -51,8 +55,8 @@ trim = true
 postprocessors = [
   { pattern = '<REPO>', replace = "https://github.com/theiskaa/markdown2pdf" },
 ]
-render_always = true
 output = "CHANGELOG.md"
+render_always = true
 
 [git]
 conventional_commits = true

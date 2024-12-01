@@ -6,8 +6,18 @@ the changelog generator (git-cliff).
 
 ---
 
-## [0.1.1] - 2024-11-29
+## [0.1.2] - 2024-12-01
+### Features
+- *(cli)* Add URL input support for remote markdown files
+- *(assets)* Embed the help text file to assets
 
+### Bug Fixes
+- *(markdown)* Remove the token printing in markdown parser
+
+### Refactor
+- *(bin)* Re-implement the structure of cli
+
+## [0.1.1] - 2024-11-29
 ### Features
 - *(pdf)* Implement hierarchical list rendering with proper indentation
 - *(markdown)* Support mixed ordered/unordered nested lists
@@ -36,7 +46,6 @@ the changelog generator (git-cliff).
 * @orhun made their first contribution
 
 ## [0.1.0] - 2024-11-17
-
 ### Features
 - *(docs)* Update readme
 - *(docs)* Add contributing document

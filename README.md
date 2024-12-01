@@ -28,15 +28,15 @@ cargo add markdown2pdf
 
 Or add the following line to your Cargo.toml:
 ```toml
-markdown2pdf = "0.1.1"
+markdown2pdf = "0.1.2"
 ```
 
 ## Usage
 To use the `markdown2pdf` tool, you can either specify a Markdown file path, provide Markdown content directly, or set the output PDF path.
-
 ### Options
 - `-p`, `--path`: Specify the path to the Markdown file to convert.
 - `-s`, `--string`: Provide Markdown content directly as a string.
+- `-u`, `--url`: Specify a URL to fetch Markdown content from.
 - `-o`, `--output`: Specify the output file path for the generated PDF.
 
 ### Examples
@@ -45,25 +45,25 @@ To use the `markdown2pdf` tool, you can either specify a Markdown file path, pro
    markdown2pdf -p "docs/resume.md" -o "resume.pdf"
    ```
 
-   This will convert the `resume.md` file located in the `docs` folder to a PDF file named `resume.pdf`.
+   Convert the 'resume.md' file in the 'docs' folder to 'resume.pdf'.
 
 2. Convert Markdown content provided as a string:
    ```bash
-   markdown2pdf -s "# My Markdown Title\n\nThis is content." -o "output.pdf"
+   markdown2pdf -s "**bold text** *italic text*." -o "output.pdf"
    ```
 
-   This will convert the provided Markdown string to a PDF file named `output.pdf`.
+   Convert the provided Markdown string to 'output.pdf'.
 
-3. Convert a Markdown file to a PDF with default output:
+3. Convert Markdown from a URL:
    ```bash
-   markdown2pdf -p "file.md"
+   markdown2pdf -u "https://raw.githubusercontent.com/user/repo/main/README.md" -o "readme.pdf"
    ```
 
-   This will convert the `file.md` to a PDF and save it as `output.pdf`.
+   Convert the Markdown content from the URL to 'readme.pdf'.
 
 ### Notes
-- If both `-p` and `-s` options are provided, the `--path` option will take precedence.
-- If no output file is specified using the `-o` option, the default output file will be named `output.pdf`.
+- If multiple input options (-p, -s, -u) are provided, only one will be used in this order: path > url > string
+- If no output file is specified with `-o`, the default output file will be 'output.pdf'.
 
 ## Using as Library
 The library at its core employs a lexical analyzer that tokenizes the input Markdown text into semantic elements like headings, emphasis, code blocks, and lists. The lexer handles nested structures and maintains proper context during parsing. After lexical analysis, the tokens are processed through a styling engine that applies visual formatting based on configuration rules. The styling engine supports customization of fonts, colors, spacing, and other typographic properties through a TOML configuration file.
