@@ -107,7 +107,6 @@ impl Lexer {
 
         while self.position < self.input.len() {
             if let Some(token) = self.next_token()? {
-                println!("{:?}", token);
                 tokens.push(token);
             }
         }
