@@ -25,6 +25,13 @@ static EMBEDDED_FONTS: Lazy<HashMap<&str, &str>> = Lazy::new(|| {
     m
 });
 
+/// Static mapping for other embedded assets and their file paths
+static EMBEDDED_ASSETS: Lazy<HashMap<&str, &str>> = Lazy::new(|| {
+    let mut m = HashMap::new();
+    m.insert("help", "help.txt");
+    m
+});
+
 /// Retrieves the binary data for an embedded font file. Takes a font path relative to the assets
 /// folder and returns the raw font data if found. Returns None if the specified font file does
 /// not exist in the embedded assets.
@@ -44,4 +51,14 @@ pub fn is_embedded_font(name: &str) -> bool {
 /// found in the embedded assets.
 pub fn get_embedded_font_path(name: &str) -> Option<&'static str> {
     EMBEDDED_FONTS.get(name.to_lowercase().as_str()).copied()
+}
+
+/// Retrieves the content of an embedded text asset as a UTF-8 string.
+/// Returns None if the asset doesn't exist or cannot be decoded as UTF-8.
+pub fn get_text_asset(name: &str) -> Option<String> {
+    if let Some(path) = EMBEDDED_ASSETS.get(name) {
+        Assets::get(path).and_then(|f| String::from_utf8(f.data.to_vec()).ok())
+    } else {
+        None
+    }
 }

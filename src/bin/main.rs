@@ -1,49 +1,77 @@
 use clap::{Arg, Command};
+use markdown2pdf::assets;
+use reqwest::blocking::Client;
 use std::fs;
+use std::path::PathBuf;
+use std::process;
 
-// TODO: move this help message into another file (txt)
-const HELP: &str = r#"
-                _      _                  ___           _  __
- _ __  __ _ _ _| |____| |_____ __ ___ _  |_  ) _ __  __| |/ _|
-| '  \/ _` | '_| / / _` / _ \ V  V / ' \  / / | '_ \/ _` |  _|
-|_|_|_\__,_|_| |_\_\__,_\___/\_/\_/|_||_|/___\| .__/\__,_|_|
-                                              |_|
+#[derive(Debug)]
+enum AppError {
+    FileReadError(std::io::Error),
+    ConversionError(String),
+    PathError(String),
+    NetworkError(String),
+}
 
-Usage: markdown2pdf [OPTIONS]
-The 'markdown2pdf' command is a tool for converting Markdown content into a PDF document.
+fn get_markdown_input(matches: &clap::ArgMatches) -> Result<String, AppError> {
+    if let Some(file_path) = matches.get_one::<String>("path") {
+        fs::read_to_string(file_path).map_err(|e| AppError::FileReadError(e))
+    } else if let Some(url) = matches.get_one::<String>("url") {
+        Client::new()
+            .get(url)
+            .send()
+            .map_err(|e| AppError::NetworkError(e.to_string()))?
+            .text()
+            .map_err(|e| AppError::NetworkError(e.to_string()))
+    } else if let Some(markdown_string) = matches.get_one::<String>("string") {
+        Ok(markdown_string.to_string())
+    } else {
+        Err(AppError::ConversionError("No input provided".to_string()))
+    }
+}
 
-Options:
-  -p, --path        Specify the path to the Markdown file to convert.
-  -s, --string      Provide Markdown content directly as a string.
-  -o, --output      Specify the output file path for the generated PDF.
+fn get_output_path(matches: &clap::ArgMatches) -> Result<PathBuf, AppError> {
+    let current_dir = std::env::current_dir().map_err(|e| AppError::PathError(e.to_string()))?;
 
-Examples:
-  markdown2pdf -p "docs/resume.md" -o "resume.pdf"
-     Convert the 'resume.md' file in the 'docs' folder to 'resume.pdf'.
+    Ok(matches
+        .get_one::<String>("output")
+        .map(|p| current_dir.join(p))
+        .unwrap_or_else(|| current_dir.join("output.pdf")))
+}
 
-  markdown2pdf -s "**bold text** *italic text*." -o "output.pdf"
-     Convert the provided Markdown string to 'output.pdf'.
+fn run(matches: clap::ArgMatches) -> Result<(), AppError> {
+    let markdown = get_markdown_input(&matches)?;
+    let output_path = get_output_path(&matches)?;
+    let output_path_str = output_path
+        .to_str()
+        .ok_or_else(|| AppError::PathError("Invalid output path".to_string()))?;
 
-  markdown2pdf -p "file.md"
-     Convert 'file.md' to a PDF, saving it as 'output.pdf'.
+    markdown2pdf::parse(markdown, output_path_str)
+        .map_err(|e| AppError::ConversionError(e.to_string()))?;
 
-Notes:
-- If both `-p` and `-s` options are provided, the `--path` option will take precedence.
-- If no output file is specified with `-o`, the default output file will be 'output.pdf'.
-- Source code can be viewed at: https://github.com/theiskaa/markdown2pdf
-"#;
+    println!("[✓] Successfully saved PDF to {}", output_path_str);
+    Ok(())
+}
 
 fn main() {
-    let matches = Command::new("Markdown to PDF Converter")
-        .version("1.0")
-        .about("Converts Markdown files or strings to PDF")
+    let matches = Command::new("markdown2pdf")
+        .version(env!("CARGO_PKG_VERSION"))
+        .about("Convert Markdown files or strings to PDF")
         .arg(
             Arg::new("path")
                 .short('p')
                 .long("path")
                 .value_name("FILE_PATH")
                 .help("Path to the markdown file")
-                .required(false),
+                .conflicts_with_all(["string", "url"]),
+        )
+        .arg(
+            Arg::new("url")
+                .short('u')
+                .long("url")
+                .value_name("URL")
+                .help("URL to fetch markdown content from")
+                .conflicts_with_all(["string", "path"]),
         )
         .arg(
             Arg::new("string")
@@ -51,38 +79,31 @@ fn main() {
                 .long("string")
                 .value_name("MARKDOWN_STRING")
                 .help("Markdown content as a string")
-                .required(false),
+                .conflicts_with_all(["path", "url"]),
         )
         .arg(
             Arg::new("output")
                 .short('o')
                 .long("output")
                 .value_name("OUTPUT_PATH")
-                .help("Path to the output PDF file")
-                .required(false),
+                .help("Path to the output PDF file (defaults to ./output.pdf)"),
         )
         .get_matches();
 
-    let markdown = if let Some(file_path) = matches.get_one::<String>("path") {
-        fs::read_to_string(file_path).expect("[X] Failed to read markdown file")
-    } else if let Some(markdown_string) = matches.get_one::<String>("string") {
-        markdown_string.to_string()
-    } else {
-        println!("{}", HELP);
-        return;
-    };
+    if !matches.contains_id("path") && !matches.contains_id("string") && !matches.contains_id("url")
+    {
+        let help_text = assets::get_text_asset("help").unwrap();
+        println!("{}", help_text);
+        process::exit(1);
+    }
 
-    let current_dir = std::env::current_dir().expect("Failed to get current directory");
-    let binding = current_dir.join("output.pdf");
-    let output_path = matches
-        .get_one::<String>("output")
-        .map(|p| current_dir.join(p))
-        .unwrap_or(binding);
-    let output_path = output_path.to_str().expect("Invalid output path");
-
-    let result = markdown2pdf::parse(markdown, output_path);
-    match result {
-        Ok(_) => println!("[OK] Saved PDF to {}", output_path),
-        Err(e) => println!("[ERROR] Failed to transpile markdown:\n> {}", e),
+    if let Err(e) = run(matches) {
+        match e {
+            AppError::FileReadError(e) => eprintln!("[X] Error reading file: {}", e),
+            AppError::ConversionError(e) => eprintln!("[X] Conversion error: {}", e),
+            AppError::PathError(e) => eprintln!("[X] Path error: {}", e),
+            AppError::NetworkError(e) => eprintln!("[X] Network error: {}", e),
+        }
+        process::exit(1);
     }
 }
