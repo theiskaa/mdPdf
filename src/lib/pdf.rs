@@ -185,6 +185,9 @@ impl Pdf {
             return;
         }
 
+        doc.push(genpdfi::elements::Break::new(
+            self.style.text.before_spacing,
+        ));
         let mut para = genpdfi::elements::Paragraph::default();
         self.render_inline_content(&mut para, tokens);
         doc.push(para);
@@ -198,12 +201,12 @@ impl Pdf {
     /// and text color based on the heading level configuration. After rendering the heading,
     /// it adds the configured spacing.
     fn render_heading(&self, doc: &mut Document, content: &[Token], level: usize) {
-        doc.push(genpdfi::elements::Break::new(0.8)); // TODO: make this configurable before_spacing
         let heading_style = match level {
             1 => &self.style.heading_1,
             2 => &self.style.heading_2,
             3 | _ => &self.style.heading_3,
         };
+        doc.push(genpdfi::elements::Break::new(heading_style.before_spacing));
 
         let mut para = genpdfi::elements::Paragraph::default();
         let mut style = genpdfi::style::Style::new().with_font_size(heading_style.size);
@@ -290,9 +293,11 @@ impl Pdf {
     /// paragraph with the configured code style. It applies the code font size and
     /// text color settings, and adds the configured spacing after the block.
     fn render_code_block(&self, doc: &mut Document, _lang: &str, content: &str) {
-        doc.push(genpdfi::elements::Break::new(0.4)); // TODO: make this configurable `before_spacing`
-        let mut style = genpdfi::style::Style::new().with_font_size(self.style.code.size);
+        doc.push(genpdfi::elements::Break::new(
+            self.style.code.before_spacing,
+        ));
 
+        let mut style = genpdfi::style::Style::new().with_font_size(self.style.code.size);
         if let Some(color) = self.style.code.text_color {
             style = style.with_color(genpdfi::style::Color::Rgb(color.0, color.1, color.2));
         }
@@ -329,6 +334,9 @@ impl Pdf {
         number: Option<usize>,
         nesting_level: usize,
     ) {
+        doc.push(genpdfi::elements::Break::new(
+            self.style.list_item.before_spacing,
+        ));
         let mut para = genpdfi::elements::Paragraph::default();
         let style = genpdfi::style::Style::new().with_font_size(self.style.list_item.size);
 

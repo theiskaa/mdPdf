@@ -250,7 +250,7 @@ impl Lexer {
 
         Ok(Token::Emphasis {
             level: level.min(3), // Cap the level at 3
-            content: content,
+            content,
         })
     }
 

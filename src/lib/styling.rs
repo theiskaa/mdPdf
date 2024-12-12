@@ -121,6 +121,8 @@ pub struct BasicTextStyle {
     pub size: u8,
     /// Text color in RGB format
     pub text_color: Option<(u8, u8, u8)>,
+    /// Space before element in points
+    pub before_spacing: f32,
     /// Space after element in points
     pub after_spacing: f32,
     /// Text alignment within container
@@ -145,6 +147,7 @@ impl BasicTextStyle {
     /// # Arguments
     /// * `size` - Font size in points
     /// * `text_color` - Optional RGB color tuple for text
+    /// * `before_spacing` - Optional space before element in points
     /// * `after_spacing` - Optional space after element in points
     /// * `alignment` - Optional text alignment
     /// * `font_family` - Optional font family name
@@ -156,6 +159,7 @@ impl BasicTextStyle {
     pub fn new(
         size: u8,
         text_color: Option<(u8, u8, u8)>,
+        before_spacing: Option<f32>,
         after_spacing: Option<f32>,
         alignment: Option<TextAlignment>,
         font_family: Option<&'static str>,
@@ -168,6 +172,7 @@ impl BasicTextStyle {
         Self {
             size,
             text_color,
+            before_spacing: before_spacing.unwrap_or(0.0),
             after_spacing: after_spacing.unwrap_or(0.0),
             alignment,
             font_family,
@@ -210,6 +215,8 @@ pub struct StyleMatch {
     pub image: BasicTextStyle,
     /// Style for regular text
     pub text: BasicTextStyle,
+
+    // TODO: Not parsed into a actual horizontal rule currently, we need a proper styling for this
     /// Style for horizontal rules (---)
     pub horizontal_rule: BasicTextStyle,
 }
@@ -235,6 +242,7 @@ impl StyleMatch {
             heading_1: BasicTextStyle::new(
                 14,
                 Some((0, 0, 0)),
+                Some(0.8),
                 Some(0.5),
                 Some(TextAlignment::Center),
                 None,
@@ -247,6 +255,7 @@ impl StyleMatch {
             heading_2: BasicTextStyle::new(
                 12,
                 Some((0, 0, 0)),
+                Some(0.8),
                 Some(0.5),
                 Some(TextAlignment::Left),
                 None,
@@ -259,6 +268,7 @@ impl StyleMatch {
             heading_3: BasicTextStyle::new(
                 10,
                 Some((0, 0, 0)),
+                Some(0.8),
                 Some(0.5),
                 Some(TextAlignment::Left),
                 None,
@@ -274,6 +284,7 @@ impl StyleMatch {
                 None,
                 None,
                 None,
+                None,
                 false,
                 true,
                 false,
@@ -286,6 +297,7 @@ impl StyleMatch {
                 None,
                 None,
                 None,
+                None,
                 true,
                 false,
                 false,
@@ -295,6 +307,7 @@ impl StyleMatch {
             code: BasicTextStyle::new(
                 8,
                 Some((128, 128, 128)),
+                Some(0.4),
                 Some(0.4),
                 None,
                 Some("Roboto"),
@@ -310,6 +323,7 @@ impl StyleMatch {
                 None,
                 None,
                 None,
+                None,
                 false,
                 true,
                 false,
@@ -319,6 +333,7 @@ impl StyleMatch {
             list_item: BasicTextStyle::new(
                 8,
                 Some((0, 0, 0)),
+                None,
                 Some(0.5),
                 None,
                 None,
@@ -334,6 +349,7 @@ impl StyleMatch {
                 None,
                 None,
                 None,
+                None,
                 false,
                 false,
                 true,
@@ -343,6 +359,7 @@ impl StyleMatch {
             image: BasicTextStyle::new(
                 8,
                 Some((0, 0, 0)),
+                None,
                 None,
                 Some(TextAlignment::Center),
                 None,
@@ -358,6 +375,7 @@ impl StyleMatch {
                 None,
                 None,
                 None,
+                None,
                 false,
                 false,
                 false,
@@ -367,6 +385,7 @@ impl StyleMatch {
             horizontal_rule: BasicTextStyle::new(
                 8,
                 Some((0, 0, 0)),
+                None,
                 Some(0.5),
                 None,
                 None,

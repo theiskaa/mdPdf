@@ -86,6 +86,11 @@ fn parse_style(value: Option<&Value>, default: BasicTextStyle) -> BasicTextStyle
         if let Some(size) = style_config.get("size").and_then(|v| v.as_integer()) {
             style.size = size as u8;
         }
+
+        if let Some(spacing) = style_config.get("beforespacing").and_then(|v| v.as_float()) {
+            style.before_spacing = spacing as f32;
+        }
+
         if let Some(spacing) = style_config.get("afterspacing").and_then(|v| v.as_float()) {
             style.after_spacing = spacing as f32;
         }
