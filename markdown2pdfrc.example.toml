@@ -8,6 +8,7 @@
 # - size: Font size in points
 # - textcolor: RGB text color values (0-255)
 # - backgroundcolor: RGB background color values (0-255)
+# - afterspacing: Vertical spacing before element in points
 # - afterspacing: Vertical spacing after element in points
 # - alignment: Text alignment (left|center|right|justify)
 # - fontfamily: Font family name
@@ -27,6 +28,7 @@ left = 8.0
 [heading.1]
 size = 14
 textcolor = { r = 0, g = 0, b = 0 }
+beforespacing = 0.8
 afterspacing = 0.5
 alignment = "center"
 fontfamily = "roboto"
@@ -40,6 +42,7 @@ backgroundcolor = { r = 255, g = 255, b = 255 }
 [heading.2]
 size = 12
 textcolor = { r = 0, g = 0, b = 0 }
+beforespacing = 0.8
 afterspacing = 0.5
 alignment = "left"
 fontfamily = "roboto"
@@ -53,6 +56,7 @@ backgroundcolor = { r = 255, g = 255, b = 255 }
 [heading.3]
 size = 10
 textcolor = { r = 0, g = 0, b = 0 }
+beforespacing = 0.8
 afterspacing = 0.5
 alignment = "left"
 fontfamily = "roboto"
@@ -66,6 +70,7 @@ backgroundcolor = { r = 255, g = 255, b = 255 }
 [emphasis]
 size = 8
 textcolor = { r = 0, g = 0, b = 0 }
+beforespacing = 0.0
 afterspacing = 0.0
 alignment = "left"
 fontfamily = "roboto"
@@ -79,6 +84,7 @@ backgroundcolor = { r = 255, g = 255, b = 255 }
 [strong_emphasis]
 size = 8
 textcolor = { r = 0, g = 0, b = 0 }
+beforespacing = 0.0
 afterspacing = 0.0
 alignment = "left"
 fontfamily = "roboto"
@@ -92,7 +98,8 @@ backgroundcolor = { r = 255, g = 255, b = 255 }
 [code]
 size = 8
 textcolor = { r = 128, g = 128, b = 128 }
-afterspacing = 0.0
+beforespacing = 0.4
+afterspacing = 0.4
 alignment = "left"
 fontfamily = "roboto"
 bold = false
@@ -105,6 +112,7 @@ backgroundcolor = { r = 230, g = 230, b = 230 }
 [block_quote]
 size = 8
 textcolor = { r = 128, g = 128, b = 128 }
+beforespacing = 0.0
 afterspacing = 0.0
 alignment = "left"
 fontfamily = "roboto"
@@ -118,6 +126,7 @@ backgroundcolor = { r = 245, g = 245, b = 245 }
 [list_item]
 size = 8
 textcolor = { r = 0, g = 0, b = 0 }
+beforespacing = 0.0
 afterspacing = 0.5
 alignment = "left"
 fontfamily = "roboto"
@@ -157,6 +166,7 @@ backgroundcolor = { r = 255, g = 255, b = 255 }
 [text]
 size = 8
 textcolor = { r = 0, g = 0, b = 0 }
+beforespacing = 0.0
 afterspacing = 0.0
 alignment = "left"
 fontfamily = "roboto"
@@ -170,6 +180,7 @@ backgroundcolor = { r = 255, g = 255, b = 255 }
 [horizontal_rule]
 size = 8
 textcolor = { r = 0, g = 0, b = 0 }
+beforespacing = 0.0
 afterspacing = 0.5
 alignment = "left"
 fontfamily = "roboto"
