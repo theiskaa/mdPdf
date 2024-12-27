@@ -405,3 +405,164 @@ impl Default for StyleMatch {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_mdpdf_font_basics() {
+        let font = MdPdfFont::Roboto;
+        assert_eq!(font.dir(), "roboto");
+        assert_eq!(font.file(), "Roboto");
+    }
+
+    #[test]
+    fn test_font_matching() {
+        assert_eq!(MdPdfFont::find_match(None), MdPdfFont::Roboto);
+        assert_eq!(MdPdfFont::find_match(Some("roboto")), MdPdfFont::Roboto);
+        assert_eq!(MdPdfFont::find_match(Some("unknown")), MdPdfFont::Roboto);
+        assert_eq!(MdPdfFont::find_match(Some("")), MdPdfFont::Roboto);
+    }
+
+    #[test]
+    fn test_font_variant_loading() {
+        let variants = ["Regular", "Bold", "Italic", "BoldItalic"];
+        for variant in variants {
+            let result = MdPdfFont::load_font_variant(MdPdfFont::Roboto, variant);
+            assert!(result.is_ok(), "Failed to load {} variant", variant);
+        }
+    }
+
+    #[test]
+    fn test_font_family_loading() {
+        let result = MdPdfFont::load_font_family(None);
+        assert!(result.is_ok());
+
+        let result = MdPdfFont::load_font_family(Some("roboto"));
+        assert!(result.is_ok());
+
+        let result = MdPdfFont::load_font_family(Some("unknown"));
+        assert!(result.is_ok()); // Should default to Roboto
+    }
+
+    #[test]
+    fn test_text_alignment_variants() {
+        assert_ne!(TextAlignment::Left, TextAlignment::Center);
+        assert_ne!(TextAlignment::Left, TextAlignment::Right);
+        assert_ne!(TextAlignment::Left, TextAlignment::Justify);
+        assert_ne!(TextAlignment::Center, TextAlignment::Right);
+        assert_ne!(TextAlignment::Center, TextAlignment::Justify);
+        assert_ne!(TextAlignment::Right, TextAlignment::Justify);
+    }
+
+    #[test]
+    fn test_margins_creation() {
+        let margins = Margins {
+            top: 10.0,
+            right: 20.0,
+            bottom: 30.0,
+            left: 40.0,
+        };
+
+        assert_eq!(margins.top, 10.0);
+        assert_eq!(margins.right, 20.0);
+        assert_eq!(margins.bottom, 30.0);
+        assert_eq!(margins.left, 40.0);
+    }
+
+    #[test]
+    fn test_basic_text_style_creation() {
+        let style = BasicTextStyle::new(
+            12,
+            Some((0, 0, 0)),
+            Some(1.0),
+            Some(2.0),
+            Some(TextAlignment::Left),
+            Some("Roboto"),
+            true,
+            false,
+            true,
+            false,
+            Some((255, 255, 255)),
+        );
+
+        assert_eq!(style.size, 12);
+        assert_eq!(style.text_color, Some((0, 0, 0)));
+        assert_eq!(style.before_spacing, 1.0);
+        assert_eq!(style.after_spacing, 2.0);
+        assert_eq!(style.alignment, Some(TextAlignment::Left));
+        assert_eq!(style.font_family, Some("Roboto"));
+        assert!(style.bold);
+        assert!(!style.italic);
+        assert!(style.underline);
+        assert!(!style.strikethrough);
+        assert_eq!(style.background_color, Some((255, 255, 255)));
+    }
+
+    #[test]
+    fn test_basic_text_style_with_none_values() {
+        let style = BasicTextStyle::new(
+            12, None, None, None, None, None, false, false, false, false, None,
+        );
+
+        assert_eq!(style.size, 12);
+        assert_eq!(style.text_color, None);
+        assert_eq!(style.before_spacing, 0.0); // Default when None
+        assert_eq!(style.after_spacing, 0.0); // Default when None
+        assert_eq!(style.alignment, None);
+        assert_eq!(style.font_family, None);
+        assert_eq!(style.background_color, None);
+    }
+
+    #[test]
+    fn test_basic_text_style_default() {
+        let style = BasicTextStyle::default();
+
+        assert_eq!(style.size, 12);
+        assert_eq!(style.text_color, None);
+        assert_eq!(style.before_spacing, 0.0);
+        assert_eq!(style.after_spacing, 0.0);
+        assert_eq!(style.alignment, None);
+        assert_eq!(style.font_family, None);
+        assert!(!style.bold);
+        assert!(!style.italic);
+        assert!(!style.underline);
+        assert!(!style.strikethrough);
+        assert_eq!(style.background_color, None);
+    }
+
+    #[test]
+    fn test_style_match_default() {
+        let styles = StyleMatch::default();
+        assert_eq!(styles.margins.top, 8.0);
+        assert_eq!(styles.margins.right, 8.0);
+        assert_eq!(styles.margins.bottom, 8.0);
+        assert_eq!(styles.margins.left, 8.0);
+        assert_eq!(styles.heading_1.size, 14);
+        assert_eq!(styles.heading_1.alignment, Some(TextAlignment::Center));
+        assert!(styles.heading_1.bold);
+        assert_eq!(styles.heading_2.size, 12);
+        assert_eq!(styles.heading_2.alignment, Some(TextAlignment::Left));
+        assert!(styles.heading_2.bold);
+        assert_eq!(styles.heading_3.size, 10);
+        assert_eq!(styles.heading_3.alignment, Some(TextAlignment::Left));
+        assert!(styles.heading_3.bold);
+        assert!(styles.emphasis.italic);
+        assert!(!styles.emphasis.bold);
+        assert!(styles.strong_emphasis.bold);
+        assert!(!styles.strong_emphasis.italic);
+        assert_eq!(styles.code.text_color, Some((128, 128, 128)));
+        assert_eq!(styles.code.background_color, Some((230, 230, 230)));
+        assert_eq!(styles.code.font_family, Some("Roboto"));
+        assert!(styles.block_quote.italic);
+        assert_eq!(styles.block_quote.background_color, Some((245, 245, 245)));
+        assert_eq!(styles.list_item.after_spacing, 0.5);
+        assert!(styles.link.underline);
+        assert_eq!(styles.link.text_color, Some((128, 128, 128)));
+        assert_eq!(styles.image.alignment, Some(TextAlignment::Center));
+        assert_eq!(styles.text.size, 8);
+        assert_eq!(styles.text.text_color, Some((0, 0, 0)));
+        assert_eq!(styles.horizontal_rule.after_spacing, 0.5);
+    }
+}
