@@ -176,3 +176,31 @@ pub fn parse(markdown: String, path: &str) -> Result<(), MdpError> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_basic_markdown_conversion() {
+        let markdown = "# Test\nHello world".to_string();
+        let result = parse(markdown, "test_output.pdf");
+        assert!(result.is_ok());
+        fs::remove_file("test_output.pdf").unwrap();
+    }
+
+    #[test]
+    fn test_invalid_markdown() {
+        let markdown = "![Invalid".to_string();
+        let result = parse(markdown, "error_output.pdf");
+        assert!(matches!(result, Err(MdpError::ParseError(_))));
+    }
+
+    #[test]
+    fn test_invalid_output_path() {
+        let markdown = "# Test".to_string();
+        let result = parse(markdown, "/nonexistent/directory/output.pdf");
+        assert!(matches!(result, Err(MdpError::PdfError(_))));
+    }
+}
