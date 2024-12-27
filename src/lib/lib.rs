@@ -9,11 +9,13 @@
 //! Basic usage involves passing Markdown content as a string along with an output path:
 //! ```rust
 //! use markdown2pdf;
+//! use std::error::Error;
 //!
-//! // Convert Markdown string to PDF
-//! let markdown = "# Hello World\nThis is a test.".to_string();
-//! if let Err(e) = markdown2pdf::parse(markdown, "output.pdf") {
-//!     eprintln!("Failed to generate PDF: {}", e);
+//! // Convert Markdown string to PDF with proper error handling
+//! fn example() -> Result<(), Box<dyn Error>> {
+//!     let markdown = "# Hello World\nThis is a test.".to_string();
+//!     markdown2pdf::parse(markdown, "output.pdf")?;
+//!     Ok(())
 //! }
 //! ```
 //!
@@ -22,25 +24,33 @@
 //! ```rust
 //! use markdown2pdf;
 //! use std::fs;
+//! use std::error::Error;
 //!
-//! // Read markdown file
-//! let markdown = fs::read_to_string("input.md").unwrap();
-//!
-//! // Convert with custom styling from markdown2pdfrc.toml
-//! markdown2pdf::parse(markdown, "styled-output.pdf").unwrap();
+//! // Read markdown file with proper error handling
+//! fn example_with_styling() -> Result<(), Box<dyn Error>> {
+//!     let markdown = fs::read_to_string("input.md")?;
+//!     markdown2pdf::parse(markdown, "styled-output.pdf")?;
+//!     Ok(())
+//! }
 //! ```
 //!
 //! The library also handles rich content like images and links seamlessly:
 //! ```rust
-//! let markdown = r#"
-//! # Document Title
+//! use markdown2pdf;
+//! use std::error::Error;
 //!
-//! ![Logo](./images/logo.png)
+//! fn example_with_rich_content() -> Result<(), Box<dyn Error>> {
+//!     let markdown = r#"
+//!     # Document Title
 //!
-//! See our [website](https://example.com) for more info.
-//! "#.to_string();
+//!     ![Logo](./images/logo.png)
 //!
-//! markdown2pdf::parse(markdown, "doc-with-images.pdf").unwrap();
+//!     See our [website](https://example.com) for more info.
+//!     "#.to_string();
+//!
+//!     markdown2pdf::parse(markdown, "doc-with-images.pdf")?;
+//!     Ok(())
+//! }
 //! ```
 //!
 //! The styling configuration file supports comprehensive customization of the document appearance.
@@ -140,11 +150,14 @@ impl fmt::Display for MdpError {
 ///
 /// # Example
 /// ```rust
+/// use std::fs;
+/// use std::error::Error;
+///
 /// // Convert a Markdown file to PDF with custom styling
-/// let markdown = std::fs::read_to_string("input.md").unwrap();
-/// let result = markdown2pdf::parse(markdown, "output.pdf");
-/// if let Err(e) = result {
-///     eprintln!("Conversion failed: {}", e);
+/// fn example() -> Result<(), Box<dyn Error>> {
+///     let markdown = fs::read_to_string("input.md")?;
+///     markdown2pdf::parse(markdown, "output.pdf")?;
+///     Ok(())
 /// }
 /// ```
 pub fn parse(markdown: String, path: &str) -> Result<(), MdpError> {
@@ -162,4 +175,32 @@ pub fn parse(markdown: String, path: &str) -> Result<(), MdpError> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_basic_markdown_conversion() {
+        let markdown = "# Test\nHello world".to_string();
+        let result = parse(markdown, "test_output.pdf");
+        assert!(result.is_ok());
+        fs::remove_file("test_output.pdf").unwrap();
+    }
+
+    #[test]
+    fn test_invalid_markdown() {
+        let markdown = "![Invalid".to_string();
+        let result = parse(markdown, "error_output.pdf");
+        assert!(matches!(result, Err(MdpError::ParseError(_))));
+    }
+
+    #[test]
+    fn test_invalid_output_path() {
+        let markdown = "# Test".to_string();
+        let result = parse(markdown, "/nonexistent/directory/output.pdf");
+        assert!(matches!(result, Err(MdpError::PdfError(_))));
+    }
 }
