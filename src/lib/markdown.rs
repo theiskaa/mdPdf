@@ -615,3 +615,406 @@ impl Lexer {
         count
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Helper function to create a lexer and parse input
+    fn parse(input: &str) -> Vec<Token> {
+        let mut lexer = Lexer::new(input.to_string());
+        lexer.parse().unwrap()
+    }
+
+    #[test]
+    fn test_basic_text() {
+        let tokens = parse("Hello world");
+        assert_eq!(tokens, vec![Token::Text("Hello world".to_string())]);
+    }
+
+    #[test]
+    fn test_headings() {
+        let tests = vec![
+            (
+                "# H1",
+                vec![Token::Heading(vec![Token::Text("H1".to_string())], 1)],
+            ),
+            (
+                "## H2",
+                vec![Token::Heading(vec![Token::Text("H2".to_string())], 2)],
+            ),
+            (
+                "### H3",
+                vec![Token::Heading(vec![Token::Text("H3".to_string())], 3)],
+            ),
+        ];
+
+        for (input, expected) in tests {
+            assert_eq!(parse(input), expected);
+        }
+    }
+
+    #[test]
+    fn test_emphasis() {
+        let tests = vec![
+            (
+                "*italic*",
+                vec![Token::Emphasis {
+                    level: 1,
+                    content: vec![
+                        Token::Text("italic".to_string()),
+                        Token::Text(" ".to_string()),
+                    ],
+                }],
+            ),
+            (
+                "**bold**",
+                vec![Token::Emphasis {
+                    level: 2,
+                    content: vec![
+                        Token::Text("bold".to_string()),
+                        Token::Text(" ".to_string()),
+                    ],
+                }],
+            ),
+            (
+                "_also italic_",
+                vec![Token::Emphasis {
+                    level: 1,
+                    content: vec![
+                        Token::Text("also italic".to_string()),
+                        Token::Text(" ".to_string()),
+                    ],
+                }],
+            ),
+        ];
+
+        for (input, expected) in tests {
+            assert_eq!(parse(input), expected);
+        }
+    }
+
+    #[test]
+    fn test_code_blocks() {
+        let tests = vec![
+            (
+                "`inline code`",
+                vec![Token::Code("".to_string(), "inline code".to_string())],
+            ),
+            (
+                "```rust\nfn main() {}\n```",
+                vec![Token::Code("rust".to_string(), "fn main() {}".to_string())],
+            ),
+        ];
+
+        for (input, expected) in tests {
+            assert_eq!(parse(input), expected);
+        }
+    }
+
+    #[test]
+    fn test_blockquotes() {
+        let tokens = parse("> This is a quote");
+        assert_eq!(
+            tokens,
+            vec![Token::BlockQuote("This is a quote".to_string())]
+        );
+    }
+
+    #[test]
+    fn test_lists() {
+        let tests = vec![
+            (
+                "- Item 1\n- Item 2",
+                vec![
+                    Token::ListItem {
+                        content: vec![Token::Text("Item 1".to_string())],
+                        ordered: false,
+                        number: None,
+                    },
+                    Token::ListItem {
+                        content: vec![Token::Text("Item 2".to_string())],
+                        ordered: false,
+                        number: None,
+                    },
+                ],
+            ),
+            (
+                "1. First\n2. Second",
+                vec![
+                    Token::ListItem {
+                        content: vec![Token::Text("First".to_string())],
+                        ordered: true,
+                        number: Some(1),
+                    },
+                    Token::ListItem {
+                        content: vec![Token::Text("Second".to_string())],
+                        ordered: true,
+                        number: Some(2),
+                    },
+                ],
+            ),
+        ];
+
+        for (input, expected) in tests {
+            assert_eq!(parse(input), expected);
+        }
+    }
+
+    #[test]
+    fn test_nested_lists() {
+        let input = "- Item 1\n  - Nested 1\n  - Nested 2\n- Item 2";
+        let expected = vec![
+            Token::ListItem {
+                content: vec![
+                    Token::Text("Item 1".to_string()),
+                    Token::ListItem {
+                        content: vec![Token::Text("Nested 1".to_string())],
+                        ordered: false,
+                        number: None,
+                    },
+                    Token::ListItem {
+                        content: vec![Token::Text("Nested 2".to_string())],
+                        ordered: false,
+                        number: None,
+                    },
+                ],
+                ordered: false,
+                number: None,
+            },
+            Token::ListItem {
+                content: vec![Token::Text("Item 2".to_string())],
+                ordered: false,
+                number: None,
+            },
+        ];
+        assert_eq!(parse(input), expected);
+    }
+
+    #[test]
+    fn test_links() {
+        let tests = vec![
+            (
+                "[Link](https://example.com)",
+                vec![Token::Link(
+                    "Link".to_string(),
+                    "https://example.com".to_string(),
+                )],
+            ),
+            (
+                "![Image](image.jpg)",
+                vec![Token::Image("Image".to_string(), "image.jpg".to_string())],
+            ),
+        ];
+
+        for (input, expected) in tests {
+            assert_eq!(parse(input), expected);
+        }
+    }
+
+    #[test]
+    fn test_horizontal_rule() {
+        let tests = vec!["---", "----", "-----"];
+        for input in tests {
+            assert_eq!(parse(input), vec![Token::HorizontalRule]);
+        }
+    }
+    #[test]
+    fn test_complex_document() {
+        let input = r#"# Main Title
+
+This is a paragraph with *italic* and **bold** text.
+
+## Subsection
+
+- List item 1
+  - Nested item with `code`
+- List item 2
+
+> A blockquote
+
+---
+
+[Link](https://example.com)"#;
+
+        let tokens = parse(input);
+        assert!(tokens.len() > 0);
+        assert!(matches!(tokens[0], Token::Heading(_, 1)));
+        // Add more specific assertions as needed
+    }
+
+    #[test]
+    fn test_error_cases() {
+        let mut lexer = Lexer::new("![Invalid".to_string());
+        assert!(matches!(lexer.parse(), Err(LexerError::UnknownToken(_))));
+    }
+
+    #[test]
+    fn test_code_block_edge_cases() {
+        let tests = vec![
+            (
+                "```\nempty language\n```",
+                vec![Token::Code("".to_string(), "empty language".to_string())],
+            ),
+            (
+                "`code with *asterisk*`",
+                vec![Token::Code(
+                    "".to_string(),
+                    "code with *asterisk*".to_string(),
+                )],
+            ),
+            (
+                "```rust\nfn main() {\n    println!(\"Hello\");\n}\n```",
+                vec![Token::Code(
+                    "rust".to_string(),
+                    "fn main() {\n    println!(\"Hello\");\n}".to_string(),
+                )],
+            ),
+        ];
+
+        for (input, expected) in tests {
+            assert_eq!(parse(input), expected);
+        }
+    }
+
+    #[test]
+    fn test_nested_list_combinations() {
+        let input = r#"1. First level
+   - Nested unordered
+   - Another unordered
+2. Second level
+   1. Nested ordered
+   2. Another ordered
+   - Mixed with unordered"#;
+
+        let tokens = parse(input);
+        assert_eq!(tokens.len(), 2); // Two top-level items
+        assert!(matches!(
+            tokens[0],
+            Token::ListItem {
+                ordered: true,
+                number: Some(1),
+                ..
+            }
+        ));
+        assert!(matches!(
+            tokens[1],
+            Token::ListItem {
+                ordered: true,
+                number: Some(2),
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn test_blockquote_variations() {
+        let tests = vec![
+            (
+                "> Simple quote",
+                vec![Token::BlockQuote("Simple quote".to_string())],
+            ),
+            (
+                "> Quote with *emphasis*",
+                vec![Token::BlockQuote("Quote with *emphasis*".to_string())],
+            ),
+            (
+                "> Quote with [link](url)",
+                vec![Token::BlockQuote("Quote with [link](url)".to_string())],
+            ),
+        ];
+
+        for (input, expected) in tests {
+            assert_eq!(parse(input), expected);
+        }
+    }
+
+    #[test]
+    fn test_link_and_image_edge_cases() {
+        let tests = vec![
+            (
+                "[Link with spaces](https://example.com/path with spaces)",
+                vec![Token::Link(
+                    "Link with spaces".to_string(),
+                    "https://example.com/path with spaces".to_string(),
+                )],
+            ),
+            (
+                "![Image with *emphasis* in alt](image.jpg)",
+                vec![Token::Image(
+                    "Image with *emphasis* in alt".to_string(),
+                    "image.jpg".to_string(),
+                )],
+            ),
+            (
+                "[Empty]()",
+                vec![Token::Link("Empty".to_string(), "".to_string())],
+            ),
+        ];
+
+        for (input, expected) in tests {
+            assert_eq!(parse(input), expected);
+        }
+    }
+
+    #[test]
+    fn test_whitespace_handling() {
+        let tests = vec![(
+            "*emphasis with space after*  ",
+            vec![Token::Emphasis {
+                level: 1,
+                content: vec![
+                    Token::Text("emphasis with space after".to_string()),
+                    Token::Text(" ".to_string()),
+                ],
+            }],
+        )];
+
+        for (input, expected) in tests {
+            assert_eq!(parse(input), expected);
+        }
+    }
+
+    #[test]
+    fn test_mixed_content() {
+        let input = r#"# Title with *emphasis*
+
+A paragraph with `code` and [link](url).
+
+- List with **bold**
+  1. Nested with *italic*
+  2. And `code`
+
+> Quote with [link](url)"#;
+
+        let tokens = parse(input);
+        assert!(tokens.len() > 0);
+
+        // Verify first token is a heading with emphasis
+        if let Token::Heading(content, 1) = &tokens[0] {
+            assert!(content
+                .iter()
+                .any(|token| matches!(token, Token::Emphasis { .. })));
+        } else {
+            panic!("Expected heading with emphasis");
+        }
+    }
+
+    #[test]
+    fn test_html_comment_variations() {
+        let tests = vec![
+            (
+                "<!-- Simple -->",
+                vec![Token::HtmlComment(" Simple ".to_string())],
+            ),
+            (
+                "<!--Multi\nline\ncomment-->",
+                vec![Token::HtmlComment("Multi\nline\ncomment".to_string())],
+            ),
+        ];
+
+        for (input, expected) in tests {
+            assert_eq!(parse(input), expected);
+        }
+    }
+}
