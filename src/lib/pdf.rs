@@ -376,3 +376,178 @@ impl Pdf {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::styling::StyleMatch;
+
+    // Helper function to create a basic PDF instance for testing
+    fn create_test_pdf(tokens: Vec<Token>) -> Pdf {
+        Pdf::new(tokens, StyleMatch::default())
+    }
+
+    #[test]
+    fn test_pdf_creation() {
+        let pdf = create_test_pdf(vec![]);
+        assert!(pdf.input.is_empty());
+
+        // Test that both font families exist
+        let _font_family = &pdf.font_family;
+        let _code_font_family = &pdf.code_font_family;
+
+        // Since FontData's fields are private and it doesn't implement comparison traits,
+        // we can only verify that the PDF was created successfully with these fonts
+        let doc = pdf.render_into_document();
+        assert!(Pdf::render(doc, "/dev/null").is_none());
+    }
+
+    #[test]
+    fn test_render_heading() {
+        let tokens = vec![
+            Token::Heading(vec![Token::Text("Test Heading".to_string())], 1),
+            Token::Heading(vec![Token::Text("Subheading".to_string())], 2),
+            Token::Heading(vec![Token::Text("Sub-subheading".to_string())], 3),
+        ];
+        let pdf = create_test_pdf(tokens);
+        let doc = pdf.render_into_document();
+        // Document should be created successfully
+        assert!(Pdf::render(doc, "/dev/null").is_none());
+    }
+
+    #[test]
+    fn test_render_paragraphs() {
+        let tokens = vec![
+            Token::Text("First paragraph".to_string()),
+            Token::Newline,
+            Token::Text("Second paragraph".to_string()),
+        ];
+        let pdf = create_test_pdf(tokens);
+        let doc = pdf.render_into_document();
+        assert!(Pdf::render(doc, "/dev/null").is_none());
+    }
+
+    #[test]
+    fn test_render_list_items() {
+        let tokens = vec![
+            Token::ListItem {
+                content: vec![Token::Text("First item".to_string())],
+                ordered: false,
+                number: None,
+            },
+            Token::ListItem {
+                content: vec![Token::Text("Second item".to_string())],
+                ordered: true,
+                number: Some(1),
+            },
+        ];
+        let pdf = create_test_pdf(tokens);
+        let doc = pdf.render_into_document();
+        assert!(Pdf::render(doc, "/dev/null").is_none());
+    }
+
+    #[test]
+    fn test_render_nested_list_items() {
+        let tokens = vec![Token::ListItem {
+            content: vec![
+                Token::Text("Parent item".to_string()),
+                Token::ListItem {
+                    content: vec![Token::Text("Child item".to_string())],
+                    ordered: false,
+                    number: None,
+                },
+            ],
+            ordered: false,
+            number: None,
+        }];
+        let pdf = create_test_pdf(tokens);
+        let doc = pdf.render_into_document();
+        assert!(Pdf::render(doc, "/dev/null").is_none());
+    }
+
+    #[test]
+    fn test_render_code_blocks() {
+        let tokens = vec![Token::Code(
+            "rust".to_string(),
+            "fn main() {\n    println!(\"Hello\");\n}".to_string(),
+        )];
+        let pdf = create_test_pdf(tokens);
+        let doc = pdf.render_into_document();
+        assert!(Pdf::render(doc, "/dev/null").is_none());
+    }
+
+    #[test]
+    fn test_render_inline_formatting() {
+        let tokens = vec![
+            Token::Text("Normal ".to_string()),
+            Token::Emphasis {
+                level: 1,
+                content: vec![Token::Text("italic".to_string())],
+            },
+            Token::Text(" and ".to_string()),
+            Token::StrongEmphasis(vec![Token::Text("bold".to_string())]),
+            Token::Text(" text".to_string()),
+        ];
+        let pdf = create_test_pdf(tokens);
+        let doc = pdf.render_into_document();
+        assert!(Pdf::render(doc, "/dev/null").is_none());
+    }
+
+    #[test]
+    fn test_render_links() {
+        let tokens = vec![
+            Token::Text("Here is a ".to_string()),
+            Token::Link("link".to_string(), "https://example.com".to_string()),
+            Token::Text(" to click".to_string()),
+        ];
+        let pdf = create_test_pdf(tokens);
+        let doc = pdf.render_into_document();
+        assert!(Pdf::render(doc, "/dev/null").is_none());
+    }
+
+    #[test]
+    fn test_render_horizontal_rule() {
+        let tokens = vec![
+            Token::Text("Before rule".to_string()),
+            Token::HorizontalRule,
+            Token::Text("After rule".to_string()),
+        ];
+        let pdf = create_test_pdf(tokens);
+        let doc = pdf.render_into_document();
+        assert!(Pdf::render(doc, "/dev/null").is_none());
+    }
+
+    #[test]
+    fn test_render_mixed_content() {
+        let tokens = vec![
+            Token::Heading(vec![Token::Text("Title".to_string())], 1),
+            Token::Text("Some text ".to_string()),
+            Token::Link("with link".to_string(), "https://example.com".to_string()),
+            Token::Newline,
+            Token::ListItem {
+                content: vec![Token::Text("List item".to_string())],
+                ordered: false,
+                number: None,
+            },
+            Token::Code("rust".to_string(), "let x = 42;".to_string()),
+        ];
+        let pdf = create_test_pdf(tokens);
+        let doc = pdf.render_into_document();
+        assert!(Pdf::render(doc, "/dev/null").is_none());
+    }
+
+    #[test]
+    fn test_render_empty_content() {
+        let pdf = create_test_pdf(vec![]);
+        let doc = pdf.render_into_document();
+        assert!(Pdf::render(doc, "/dev/null").is_none());
+    }
+
+    #[test]
+    fn test_render_invalid_path() {
+        let pdf = create_test_pdf(vec![Token::Text("Test".to_string())]);
+        let doc = pdf.render_into_document();
+        let result = Pdf::render(doc, "/nonexistent/path/file.pdf");
+        assert!(result.is_some()); // Should return an error message
+    }
+}
