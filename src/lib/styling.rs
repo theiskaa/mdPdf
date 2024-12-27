@@ -93,7 +93,7 @@ impl MdPdfFont {
 }
 
 /// Text alignment options for PDF elements.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TextAlignment {
     /// Align text to the left margin
     Left,
@@ -105,8 +105,8 @@ pub enum TextAlignment {
     Justify,
 }
 
-/// Document margins configuration in points.
-#[derive(Clone, Copy)]
+/// Margins configuration in points.
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Margins {
     pub top: f32,
     pub right: f32,
@@ -115,7 +115,7 @@ pub struct Margins {
 }
 
 /// Basic text styling properties that can be applied to any text element.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BasicTextStyle {
     /// Font size in points
     pub size: u8,
@@ -185,6 +185,16 @@ impl BasicTextStyle {
     }
 }
 
+// LSP in vim behaves strangely with this default implementation.
+// It's not used anywhere but included just in case.
+impl Default for BasicTextStyle {
+    fn default() -> Self {
+        Self::new(
+            12, None, None, None, None, None, false, false, false, false, None,
+        )
+    }
+}
+
 /// Main style configuration for mapping markdown elements to PDF styles.
 ///
 /// This struct contains style definitions for each markdown element type
@@ -221,17 +231,14 @@ pub struct StyleMatch {
     pub horizontal_rule: BasicTextStyle,
 }
 
-impl StyleMatch {
-    /// Creates a StyleMatch with default styling settings.
-    ///
-    /// The default style provides a clean, readable layout with hierarchical heading sizes,
-    /// appropriate base font sizes, and consistent spacing throughout the document. It sets
-    /// up styling for all supported markdown elements including headings, emphasis, code blocks,
-    /// quotes, lists and more.
-    ///
-    /// # Returns
-    /// A new StyleMatch instance with default settings
-    pub fn default() -> Self {
+/// Creates a StyleMatch with default styling settings.
+///
+/// The default style provides a clean, readable layout with hierarchical heading sizes,
+/// appropriate base font sizes, and consistent spacing throughout the document. It sets
+/// up styling for all supported markdown elements including headings, emphasis, code blocks,
+/// quotes, lists and more.
+impl Default for StyleMatch {
+    fn default() -> Self {
         Self {
             margins: Margins {
                 top: 8.0,
