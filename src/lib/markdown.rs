@@ -9,19 +9,25 @@
 //!
 //! # Examples
 //! ```rust
-//! use markdown2pdf::Token;
+//! use markdown2pdf::markdown::Token;
 //!
-//! // Heading token with nested content
+//! // Heading token with nested content (level 1-6 is valid)
 //! let heading = Token::Heading(vec![Token::Text("Title".to_string())], 1);
+//! assert!(matches!(heading, Token::Heading(_, 1)));
 //!
-//! // Emphasis token with nested content
+//! // Emphasis token with nested content (level 1-3 is valid)
 //! let emphasis = Token::Emphasis {
 //!     level: 1,
 //!     content: vec![Token::Text("italic".to_string())]
 //! };
+//! assert!(matches!(emphasis, Token::Emphasis { level: 1, .. }));
 //!
 //! // Link token with text and URL
-//! let link = Token::Link("Click here".to_string(), "https://example.com".to_string());
+//! let link = Token::Link(
+//!     "Click here".to_string(),
+//!     "https://example.com".to_string()
+//! );
+//! assert!(matches!(link, Token::Link(_, _)));
 //! ```
 //!
 //! Token (nested) structure looks like:
